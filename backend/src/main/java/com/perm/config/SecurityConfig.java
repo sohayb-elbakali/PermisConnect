@@ -59,7 +59,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        // Chemins Swagger
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**", "/swagger-resources/**", "/v3/api-docs/**", "/webjars/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -68,7 +69,6 @@ public class SecurityConfig {
 
         return http.build();
     }
-
     // Other security configurations...
 
 }
