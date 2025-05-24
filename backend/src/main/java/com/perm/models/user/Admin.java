@@ -21,6 +21,10 @@ public class Admin extends Utilisateur {
         // Implémentation dans AdminService
     }
 
+    public Long getAutoEcoleId() {
+        return this.autoEcole != null ? this.autoEcole.getId() : null;
+    }
+
     public void gererMoniteurs() {
         // Implémentation dans AdminService
     }
