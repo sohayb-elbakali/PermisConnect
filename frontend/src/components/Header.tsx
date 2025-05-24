@@ -1,6 +1,6 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+import { router } from "expo-router";
+import NotificationBar from "./NotificationBar";
 
 // Define props interface for Header component
 interface HeaderProps {
@@ -14,29 +14,75 @@ const Header: React.FC<HeaderProps> = ({
   onProfilePress,
   onNotificationPress,
 }) => {
+  const [showNotifications, setShowNotifications] = React.useState(false);
+  const slideAnim = useRef(new Animated.Value(-1000)).current;
+
+  const handleProfilePress = () => {
+    // Navigate to profile screen
+    router.push("/profile");
+
+    // Call the optional prop function if provided
+    if (onProfilePress) {
+      onProfilePress();
+    }
+  };
+
+  const handleNotificationPress = () => {
+    if (showNotifications) {
+      // Close notification bar
+      Animated.timing(slideAnim, {
+        toValue: -1000,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowNotifications(false);
+      });
+    } else {
+      // Open notification bar
+      setShowNotifications(true);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    // Call the optional prop function if provided
+    if (onNotificationPress) {
+      onNotificationPress();
+    }
+  };
+
+  const closeNotificationBar = () => {
+    Animated.timing(slideAnim, {
+      toValue: -1000,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowNotifications(false);
+    });
+  };
+
   return (
     <View style={styles.header}>
       <TouchableOpacity
         style={styles.iconButton}
-        onPress={onProfilePress}
         activeOpacity={0.7}
       >
         <Icon name="person-circle-outline" size={24} color="#ff6b35" />
       </TouchableOpacity>
 
-      <Text style={styles.headerTitle}>{title}</Text>
+        <Text style={styles.headerTitle}>{title}</Text>
 
       <TouchableOpacity
-        style={styles.iconButton}
-        onPress={onNotificationPress}
         activeOpacity={0.7}
       >
-        <Icon name="notifications-outline" size={24} color="#ff6b35" />
       </TouchableOpacity>
     </View>
   );
 };
 
+// ...existing styles...
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
@@ -47,6 +93,8 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: "#eaeaea",
+    backgroundColor: "#fff",
+    zIndex: 999,
   },
   headerTitle: {
     fontSize: 20,
@@ -56,6 +104,28 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
     borderRadius: 20,
+    position: "relative",
+  },
+  activeIconButton: {
+    backgroundColor: "#ff6b35",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    backgroundColor: "#e74c3c",
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
   },
 });
 
