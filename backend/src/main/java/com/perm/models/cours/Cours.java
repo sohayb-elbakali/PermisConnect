@@ -44,4 +44,5 @@ public abstract class Cours extends AuditableEntity {
     public void modifier() {
         // Implémentation dans CoursService
     }
+
 }
