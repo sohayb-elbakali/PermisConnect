@@ -48,31 +48,29 @@ export default function HomeScreen() {
   };
 
   // ...existing code...
+  // ...existing code...
+  // ...existing code...
   const handleBottomNavPress = (tab: string) => {
     setActiveTab(tab);
-    console.log(`${tab} tab pressed`);
+    console.log(`Navigating to: ${tab}`); // Debug log
 
-    // Import router dynamically to avoid circular dependencies
-    import("expo-router").then(({ router }) => {
-      switch (tab) {
-        case "home":
-          // Already on home
-          break;
-        case "schedule":
-          router.push("/calendar");
-          break;
-        case "chat":
-          console.log("Chat tab pressed");
-          // router.push('/chat');
-          break;
-        case "settings":
-          console.log("Settings tab pressed");
-          // router.push('/settings');
-          break;
-      }
-    });
+    switch (tab) {
+      case "home":
+        router.push("/home");
+        break;
+      case "schedule":
+        router.push("/calendar")
+        break;
+      case "chat":
+        router.push("/chat");
+        break;
+      case "settings":
+        router.push("/settings");
+        break;
+    }
   };
- 
+  // ...existing code...
+  
 
   return (
     <SafeAreaView style={styles.container}>
