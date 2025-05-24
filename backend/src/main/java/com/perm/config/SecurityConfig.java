@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -61,6 +62,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/public/**").permitAll()
                         // Chemins Swagger
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**", "/swagger-resources/**", "/v3/api-docs/**", "/webjars/**").permitAll()
+                        // For testing, allow specific endpoints without authentication (remove in production)
+                        .requestMatchers(HttpMethod.POST, "/api/autoecoles/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/autoecoles/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/autoecoles/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/autoecoles/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/**").permitAll()// Added this line to permit admin creation
+                        .requestMatchers(HttpMethod.GET, "/api/users/admins").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
