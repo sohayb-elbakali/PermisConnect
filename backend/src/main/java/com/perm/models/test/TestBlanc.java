@@ -17,6 +17,10 @@ import java.util.List;
 @Table(name = "tests_blancs")
 public class TestBlanc extends AuditableEntity {
 
+
+
+
+
     @Column(nullable = false)
     private String titre;
 
