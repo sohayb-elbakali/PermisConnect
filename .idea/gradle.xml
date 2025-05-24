@@ -68,6 +68,11 @@
       </GradleProjectSettings>
       <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/frontend/node_modules/react-native-edge-to-edge/android" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/frontend/node_modules/react-native-edge-to-edge/android" />
+          </set>
+        </option>
       </GradleProjectSettings>
       <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/frontend/node_modules/react-native-gesture-handler/android" />
