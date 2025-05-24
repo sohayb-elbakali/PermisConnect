@@ -104,13 +104,13 @@ export default function CalendarScreen() {
           router.push("/home");
           break;
         case "schedule":
-          // Already on schedule
+          // Already on schedule, no action needed
           break;
         case "chat":
-          console.log("Chat tab pressed");
+          router.push("/chat");
           break;
         case "settings":
-          console.log("Settings tab pressed");
+          router.push("/settings");
           break;
       }
     });
