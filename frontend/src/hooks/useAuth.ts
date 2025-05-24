@@ -1,36 +1,73 @@
-import { useState } from "react";
-import { useAuth as useAuthContext } from "../contexts/AuthContext";
+import { useState, useEffect } from "react";
+import authService, { User, LoginCredentials } from "../services/authService";
 
-const useAuth = () => {
-  const { login, logout, user } = useAuthContext();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+export const useAuth = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const handleLogin = async (email: string, password: string): Promise<boolean> => {
+  // Check authentication status on app start
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      await login(email, password);
-      setLoading(false);
-      return true;
-    } catch (err) {
-      setLoading(false);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      return false;
+      setIsLoading(true);
+      const isAuth = await authService.isAuthenticated();
+      setIsAuthenticated(isAuth);
+
+      if (isAuth) {
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
+      setIsAuthenticated(false);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const login = async (credentials: LoginCredentials) => {
+    try {
+      setIsLoading(true);
+      const response = await authService.login(credentials);
+
+      if (response.success) {
+        setUser(response.user || null);
+        setIsAuthenticated(true);
+      }
+
+      return response;
+    } catch (error: any) {
+      return { success: false, message: error.message || "Login failed" };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      setIsLoading(true);
+      await authService.logout();
+      setUser(null);
+      setIsAuthenticated(false);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return {
-    handleLogin,
-    handleLogout,
-    error,
-    loading,
     user,
+    isAuthenticated,
+    isLoading,
+    login,
+    logout,
+    checkAuthStatus,
   };
 };
-
-export default useAuth;
