@@ -1,3 +1,5 @@
+import React, { useRef } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { router } from "expo-router";
 import NotificationBar from "./NotificationBar";
@@ -64,25 +66,45 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <View style={styles.header}>
-      <TouchableOpacity
-        style={styles.iconButton}
-        activeOpacity={0.7}
-      >
-        <Icon name="person-circle-outline" size={24} color="#ff6b35" />
-      </TouchableOpacity>
+    <>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={handleProfilePress}
+          activeOpacity={0.7}
+        >
+          <Icon name="person-circle-outline" size={24} color="#ff6b35" />
+        </TouchableOpacity>
 
         <Text style={styles.headerTitle}>{title}</Text>
 
-      <TouchableOpacity
-        activeOpacity={0.7}
-      >
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={[styles.iconButton, showNotifications && styles.activeIconButton]}
+          onPress={handleNotificationPress}
+          activeOpacity={0.7}
+        >
+          <Icon 
+            name="notifications-outline" 
+            size={24} 
+            color={showNotifications ? "#fff" : "#ff6b35"} 
+          />
+          {/* Notification badge */}
+          <View style={styles.notificationBadge}>
+            <Text style={styles.badgeText}>3</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Notification Bar */}
+      <NotificationBar
+        isVisible={showNotifications}
+        onClose={closeNotificationBar}
+        slideAnim={slideAnim}
+      />
+    </>
   );
 };
 
-// ...existing styles...
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
