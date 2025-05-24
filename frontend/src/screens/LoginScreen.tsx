@@ -1,112 +1,182 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import Button from "../components/Button";
-import TextField from "../components/TextField";
-import useAuth from "../hooks/useAuth";
-import { validateEmail } from "../utils/validation";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  StatusBar,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import Icon from "react-native-vector-icons/Ionicons";
+import { router } from "expo-router";
+import { useAuth } from "../hooks/useAuth";
 
-const LoginScreen = () => {
+export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [emailError, setEmailError] = useState<string | undefined>(undefined);
-  const [passwordError, setPasswordError] = useState<string | undefined>(undefined);
+  const [showPassword, setShowPassword] = useState(false);
   
-  const { handleLogin, error, loading } = useAuth();
+  const { login, isLoading } = useAuth();
 
-  const validateForm = (): boolean => {
-    let isValid = true;
-    
-    // Validate email
-    if (!email) {
-      setEmailError("Email is required");
-      isValid = false;
-    } else if (!validateEmail(email)) {
-      setEmailError("Please enter a valid email address");
-      isValid = false;
-    } else {
-      setEmailError(undefined);
+  const handleLogin = async () => {
+    // Basic validation
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
     }
-    
-    // Validate password
-    if (!password) {
-      setPasswordError("Password is required");
-      isValid = false;
-    } else if (password.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
-      isValid = false;
-    } else {
-      setPasswordError(undefined);
-    }
-    
-    return isValid;
-  };
 
-  const onLogin = async () => {
-    if (validateForm()) {
-      const success = await handleLogin(email, password);
-      if (success) {
-        // Use the expo-router for navigation
-        import('expo-router').then(({ router }) => {
-          router.replace('/home');
-        });
-      }
+    const result = await login({ email: email.trim(), password });
+    
+    if (result.success) {
+      Alert.alert("Success", "Login successful!", [
+        { text: "OK", onPress: () => router.replace("/home") }
+      ]);
+    } else {
+      Alert.alert("Login Failed", result.message);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
-      <TextField
-        label="Email"
-        value={email}
-        onChangeText={(text) => {
-          setEmail(text);
-          if (emailError) setEmailError(undefined);
-        }}
-        errorMessage={emailError}
-      />
-      <TextField
-        label="Password"
-        value={password}
-        onChangeText={(text) => {
-          setPassword(text);
-          if (passwordError) setPasswordError(undefined);
-        }}
-        secureTextEntry
-        errorMessage={passwordError}
-      />
-      
-      {error && <Text style={styles.errorText}>{error}</Text>}
-      
-      <Button 
-        title="Login" 
-        onPress={onLogin} 
-        isLoading={loading}
-        disabled={loading}
-      />
-    </View>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+
+      <View style={styles.header}>
+        <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.subtitle}>Sign in to continue</Text>
+      </View>
+
+      <View style={styles.form}>
+        {/* Email Input */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputWrapper}>
+            <Icon name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+        </View>
+
+        {/* Password Input */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.inputWrapper}>
+            <Icon name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeIcon}
+            >
+              <Icon
+                name={showPassword ? "eye-outline" : "eye-off-outline"}
+                size={20}
+                color="#666"
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Login Button */}
+        <TouchableOpacity
+          style={[styles.loginButton, isLoading && styles.disabledButton]}
+          onPress={handleLogin}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.loginButtonText}>Sign In</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    padding: 16,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#f8f9fa",
+  },
+  header: {
+    paddingHorizontal: 30,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "bold",
-    marginBottom: 24,
-    textAlign: "center",
-    color: "#333",
+    color: "#2c3e50",
+    marginBottom: 8,
   },
-  errorText: {
-    color: "red",
-    textAlign: "center",
-    marginVertical: 8,
+  subtitle: {
+    fontSize: 16,
+    color: "#7f8c8d",
+  },
+  form: {
+    flex: 1,
+    paddingHorizontal: 30,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2c3e50",
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e1e8ed",
+    paddingHorizontal: 15,
+    height: 50,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: "#2c3e50",
+  },
+  eyeIcon: {
+    padding: 5,
+  },
+  loginButton: {
+    backgroundColor: "#4A90E2",
+    borderRadius: 12,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 20,
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+  loginButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
-
-export default LoginScreen;
