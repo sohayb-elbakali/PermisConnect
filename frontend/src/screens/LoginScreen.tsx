@@ -31,9 +31,8 @@ export default function LoginScreen() {
     const result = await login({ email: email.trim(), password });
     
     if (result.success) {
-      Alert.alert("Success", "Login successful!", [
-        { text: "OK", onPress: () => router.replace("/home") }
-      ]);
+      // Redirect immediately to home screen on successful login
+      router.replace("/home");
     } else {
       Alert.alert("Login Failed", result.message);
     }

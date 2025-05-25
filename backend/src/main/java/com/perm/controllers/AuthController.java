@@ -51,7 +51,10 @@ public class AuthController {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = tokenProvider.generateToken(authentication);
-            Utilisateur user = (Utilisateur) authentication.getPrincipal();
+
+            // Get CustomUserDetails first, then the Utilisateur
+            com.perm.security.CustomUserDetails customUserDetails = (com.perm.security.CustomUserDetails) authentication.getPrincipal();
+            Utilisateur user = customUserDetails.getUtilisateur();
 
             // Determine the role based on the class type
             String role = "";
