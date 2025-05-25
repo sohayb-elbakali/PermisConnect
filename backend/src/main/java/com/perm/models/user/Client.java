@@ -7,6 +7,8 @@ import com.perm.models.Reservation;
 import com.perm.models.communication.Communication;
 import com.perm.models.cours.Cours;
 import com.perm.models.test.ResultatTest;
+import com.perm.utils.SwaggerIgnoreCircularDependencies;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,18 +35,27 @@ public class Client extends Utilisateur {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "auto_ecole_id")
+    @SwaggerIgnoreCircularDependencies
     private AutoEcole autoEcole;
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Schema(hidden = true)
+    @SwaggerIgnoreCircularDependencies
     private List<Reservation> reservations = new ArrayList<>();
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Schema(hidden = true)
+    @SwaggerIgnoreCircularDependencies
     private List<ResultatTest> resultatsTests = new ArrayList<>();
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Schema(hidden = true)
+    @SwaggerIgnoreCircularDependencies
     private List<Communication> communications = new ArrayList<>();
 
     @OneToOne(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Schema(hidden = true)
+    @SwaggerIgnoreCircularDependencies
     private Diagnostic diagnostic;
 
     public Diagnostic consulterDiagnostic() {
