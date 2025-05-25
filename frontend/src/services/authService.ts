@@ -3,7 +3,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface LoginCredentials {
   email: string;
-  password: string;
+  password: string;  // We'll keep this as 'password' to match the backend's LoginRequest
+}
+
+export interface RegisterCredentials {
+  nom: string;
+  prenom: string;
+  email: string;
+  motDePasse: string;  // Changed from password to match backend field name
+  telephone?: string;
+  adresse?: string;
+  statut?: string; // Added to match backend requirements
 }
 
 export interface User {
@@ -13,7 +23,7 @@ export interface User {
   role?: string;
 }
 
-export interface LoginResponse {
+export interface AuthResponse {
   success: boolean;
   message: string;
   user?: User;
@@ -21,23 +31,75 @@ export interface LoginResponse {
 }
 
 class AuthService {
+  // Register new user
+  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
+    try {
+      const response = await apiClient.post("/auth/register", credentials);
+
+      // Check if registration was successful - now using only success flag
+      if (response.data.success) {
+        // Only store token and user info if they exist
+        if (response.data.token) {
+          await AsyncStorage.setItem("authToken", response.data.token);
+
+          const userInfo = {
+            id: response.data.id,
+            name: `${response.data.prenom} ${response.data.nom}`,
+            email: response.data.email,
+            role: response.data.role
+          };
+
+          await AsyncStorage.setItem("userInfo", JSON.stringify(userInfo));
+        }
+
+        return {
+          success: true,
+          message: response.data.message || "Registration successful",
+          user: response.data.token ? {
+            id: response.data.id,
+            name: `${response.data.prenom} ${response.data.nom}`,
+            email: response.data.email,
+            role: response.data.role
+          } : undefined,
+          token: response.data.token,
+        };
+      }
+
+      return {
+        success: false,
+        message: response.data.message || "Registration failed",
+      };
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Network error. Please try again.",
+      };
+    }
+  }
+
   // Login user
-  async login(credentials: LoginCredentials): Promise<LoginResponse> {
+  async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
       const response = await apiClient.post("/auth/login", credentials);
 
       if (response.data.success && response.data.token) {
         // Store token and user info
         await AsyncStorage.setItem("authToken", response.data.token);
-        await AsyncStorage.setItem(
-          "userInfo",
-          JSON.stringify(response.data.user)
-        );
+
+        const userInfo = {
+          id: response.data.id,
+          name: `${response.data.prenom} ${response.data.nom}`,
+          email: response.data.email,
+          role: response.data.role
+        };
+
+        await AsyncStorage.setItem("userInfo", JSON.stringify(userInfo));
 
         return {
           success: true,
           message: "Login successful",
-          user: response.data.user,
+          user: userInfo,
           token: response.data.token,
         };
       }

@@ -104,6 +104,19 @@ export default function LoginScreen() {
             <Text style={styles.loginButtonText}>Sign In</Text>
           )}
         </TouchableOpacity>
+
+        {/* Sign Up Link */}
+        <View style={styles.signupContainer}>
+          <Text style={styles.signupText}>Dont have an account? </Text>
+          <TouchableOpacity onPress={() => router.push("/register")}>
+            <Text style={styles.signupLink}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Forgot Password */}
+        <TouchableOpacity style={styles.forgotPassword}>
+          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -178,5 +191,27 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  signupContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  signupText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  signupLink: {
+    color: '#2196F3',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  forgotPassword: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  forgotPasswordText: {
+    color: '#2196F3',
+    fontSize: 16,
   },
 });

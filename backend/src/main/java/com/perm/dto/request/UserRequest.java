@@ -24,7 +24,6 @@ public class UserRequest {
     @Size(min = 6, message = "Le mot de passe doit contenir au moins 6 caractères")
     private String motDePasse;
 
-    @NotBlank(message = "Le téléphone est obligatoire")
     private String telephone;
 
     // Champs spécifiques pour Admin
@@ -38,3 +37,4 @@ public class UserRequest {
     // Champs spécifiques pour Client
     private String statut;
 }
+
