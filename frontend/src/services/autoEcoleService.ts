@@ -1,0 +1,37 @@
+import apiClient from "./api";
+
+export interface AutoEcole {
+  id: number;
+  nom: string;
+  adresse: string;
+  telephone: string;
+  email: string;
+  numeroAgreement: string;
+  description?: string;
+  horaires?: string;
+  services?: string[];
+}
+
+class AutoEcoleService {
+  async getAllAutoEcoles(): Promise<AutoEcole[]> {
+    try {
+      const response = await apiClient.get("/autoecoles");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching auto-écoles:", error);
+      throw error;
+    }
+  }
+
+  async getAutoEcoleById(id: number): Promise<AutoEcole> {
+    try {
+      const response = await apiClient.get(`/autoecoles/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching auto-école ${id}:`, error);
+      throw error;
+    }
+  }
+}
+
+export default new AutoEcoleService(); 

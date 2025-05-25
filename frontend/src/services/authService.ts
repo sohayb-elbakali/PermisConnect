@@ -3,17 +3,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface LoginCredentials {
   email: string;
-  password: string;  // We'll keep this as 'password' to match the backend's LoginRequest
+  motDePasse: string;  // Changed from password to match backend field name
 }
 
 export interface RegisterCredentials {
   nom: string;
   prenom: string;
   email: string;
-  motDePasse: string;  // Changed from password to match backend field name
-  telephone?: string;
-  adresse?: string;
-  statut?: string; // Added to match backend requirements
+  motDePasse: string;
+  telephone: string;
+  adresse: string;
+  dateNaissance: string;
+  numeroPermis: string;
+  typePermis: string;
 }
 
 export interface User {
@@ -34,47 +36,55 @@ class AuthService {
   // Register new user
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
     try {
-      const response = await apiClient.post("/auth/register", credentials);
+      // Format the date to match backend format (YYYY-MM-DD)
+      const formattedCredentials = {
+        ...credentials,
+        dateNaissance: credentials.dateNaissance.split('T')[0] // Ensure date is in YYYY-MM-DD format
+      };
 
-      // Check if registration was successful - now using only success flag
-      if (response.data.success) {
-        // Only store token and user info if they exist
-        if (response.data.token) {
-          await AsyncStorage.setItem("authToken", response.data.token);
+      const response = await apiClient.post("/clients", formattedCredentials);
 
-          const userInfo = {
-            id: response.data.id,
-            name: `${response.data.prenom} ${response.data.nom}`,
-            email: response.data.email,
-            role: response.data.role
-          };
-
-          await AsyncStorage.setItem("userInfo", JSON.stringify(userInfo));
-        }
-
+      if (response.data) {
         return {
           success: true,
-          message: response.data.message || "Registration successful",
-          user: response.data.token ? {
+          message: "Inscription réussie",
+          user: {
             id: response.data.id,
             name: `${response.data.prenom} ${response.data.nom}`,
             email: response.data.email,
-            role: response.data.role
-          } : undefined,
-          token: response.data.token,
+            role: 'CLIENT'
+          }
         };
       }
 
       return {
         success: false,
-        message: response.data.message || "Registration failed",
+        message: "Échec de l'inscription",
       };
     } catch (error: any) {
       console.error("Registration error:", error);
-      return {
-        success: false,
-        message: error.response?.data?.message || "Network error. Please try again.",
-      };
+      // Handle specific error cases
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        const errorMessage = error.response.data?.message || "Erreur lors de l'inscription";
+        return {
+          success: false,
+          message: errorMessage
+        };
+      } else if (error.request) {
+        // The request was made but no response was received
+        return {
+          success: false,
+          message: "Impossible de se connecter au serveur. Veuillez vérifier votre connexion internet."
+        };
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        return {
+          success: false,
+          message: "Une erreur est survenue. Veuillez réessayer."
+        };
+      }
     }
   }
 
@@ -98,7 +108,7 @@ class AuthService {
 
         return {
           success: true,
-          message: "Login successful",
+          message: "Connexion réussie",
           user: userInfo,
           token: response.data.token,
         };
@@ -106,15 +116,26 @@ class AuthService {
 
       return {
         success: false,
-        message: response.data.message || "Login failed",
+        message: response.data.message || "Échec de la connexion",
       };
     } catch (error: any) {
       console.error("Login error:", error);
-      return {
-        success: false,
-        message:
-          error.response?.data?.message || "Network error. Please try again.",
-      };
+      if (error.response) {
+        return {
+          success: false,
+          message: error.response.data?.message || "Échec de la connexion"
+        };
+      } else if (error.request) {
+        return {
+          success: false,
+          message: "Impossible de se connecter au serveur. Veuillez vérifier votre connexion internet."
+        };
+      } else {
+        return {
+          success: false,
+          message: "Une erreur est survenue. Veuillez réessayer."
+        };
+      }
     }
   }
 

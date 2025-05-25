@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,15 +7,50 @@ import {
   StatusBar,
   TouchableOpacity,
   Image,
+  ScrollView,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
-import { router } from "expo-router";
+import { router, useRouter } from "expo-router";
 import Header from "../components/Header";
 import ProgressCircle from "../components/ProgressCircle";
 import Footer from "../components/Footer";
+import { useAuth } from "../hooks/useAuth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Button from '../components/Button';
+
+interface UserInfo {
+  id: number;
+  nom: string;
+  prenom: string;
+  email: string;
+  autoEcole: {
+    id: number;
+    nom: string;
+  };
+}
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("home");
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [autoEcoleName, setAutoEcoleName] = useState("");
+
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        const userInfoStr = await AsyncStorage.getItem("userInfo");
+        if (userInfoStr) {
+          const userData = JSON.parse(userInfoStr);
+          setUserInfo(userData);
+        }
+      } catch (error) {
+        console.error("Error loading user info:", error);
+      }
+    };
+
+    loadUserInfo();
+  }, []);
 
   const handleProfilePress = () => {
     console.log("Profile pressed");
@@ -47,9 +82,6 @@ export default function HomeScreen() {
     // router.push('/pilotage');
   };
 
-  // ...existing code...
-  // ...existing code...
-  // ...existing code...
   const handleBottomNavPress = (tab: string) => {
     setActiveTab(tab);
     console.log(`Navigating to: ${tab}`); // Debug log
@@ -69,8 +101,16 @@ export default function HomeScreen() {
         break;
     }
   };
-  // ...existing code...
-  
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('userInfo');
+      router.replace('/login');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue lors de la déconnexion');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -78,7 +118,7 @@ export default function HomeScreen() {
 
       {/* Custom Header */}
       <Header
-        title="PermisConnect"
+        title={userInfo?.autoEcole?.nom || "PermisConnect"}
         onProfilePress={handleProfilePress}
         onNotificationPress={handleNotificationPress}
       />
@@ -92,7 +132,7 @@ export default function HomeScreen() {
           />
           <View style={styles.welcomeContainer}>
             <Text style={styles.welcomeText}>Welcome</Text>
-            <Text style={styles.userRole}>PermisConnect</Text>
+            <Text style={styles.userRole}>{userInfo?.autoEcole?.nom || "PermisConnect"}</Text>
           </View>
         </View>
       </View>
@@ -100,7 +140,7 @@ export default function HomeScreen() {
       {/* Greeting */}
       <View style={styles.greetingSection}>
         <Text style={styles.helloText}>Hello</Text>
-        <Text style={styles.userName}>User</Text>
+        <Text style={styles.userName}>{userInfo?.prenom} {userInfo?.nom}</Text>
       </View>
 
       {/* Progress Circles */}
@@ -153,6 +193,26 @@ export default function HomeScreen() {
 
       {/* Bottom Navigation */}
       <Footer activeTab={activeTab} onTabPress={handleBottomNavPress} />
+
+      <View style={styles.content}>
+        <Button
+          title="Mes cours"
+          onPress={() => router.push('/cours')}
+        />
+        <Button
+          title="Tests blancs"
+          onPress={() => router.push('/tests')}
+        />
+        <Button
+          title="Mon profil"
+          onPress={() => router.push('/profile')}
+        />
+        <Button
+          title="Se déconnecter"
+          onPress={handleLogout}
+          type="secondary"
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -235,5 +295,8 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     marginLeft: 8,
+  },
+  content: {
+    padding: 20,
   },
 });

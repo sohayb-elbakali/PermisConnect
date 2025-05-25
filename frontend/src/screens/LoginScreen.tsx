@@ -9,32 +9,105 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
+  ScrollView,
+  Animated,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useAuth } from "../hooks/useAuth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import TextField from '../components/TextField';
+import Button from '../components/Button';
+import authService from '../services/authService';
+import { Colors } from '../constants/Colors';
 
-export default function LoginScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  
+const LoginScreen = () => {
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState({ message: '', type: '' });
+  const [notificationOpacity] = useState(new Animated.Value(0));
+  const [formData, setFormData] = useState({
+    email: '',
+    motDePasse: '',
+  });
+  const [errors, setErrors] = useState({
+    email: '',
+    motDePasse: '',
+  });
+
   const { login, isLoading } = useAuth();
 
-  const handleLogin = async () => {
-    // Basic validation
-    if (!email.trim() || !password.trim()) {
-      Alert.alert("Error", "Please fill in all fields");
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    Animated.sequence([
+      Animated.timing(notificationOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.delay(3000),
+      Animated.timing(notificationOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    // Clear error when user types
+    if (errors[field as keyof typeof errors]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {
+      email: '',
+      motDePasse: '',
+    };
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'L\'email est requis';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Format d\'email invalide';
+    }
+
+    if (!formData.motDePasse.trim()) {
+      newErrors.motDePasse = 'Le mot de passe est requis';
+    }
+
+    setErrors(newErrors);
+    return !Object.values(newErrors).some(error => error !== '');
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
       return;
     }
 
-    const result = await login({ email: email.trim(), password });
-    
-    if (result.success) {
-      // Redirect immediately to home screen on successful login
-      router.replace("/home");
-    } else {
-      Alert.alert("Login Failed", result.message);
+    try {
+      setLoading(true);
+      const response = await authService.login(formData);
+      if (response.success) {
+        showNotification('Connexion réussie', 'success');
+        setTimeout(() => {
+          router.replace('/autoecole-selection');
+        }, 2000);
+      } else {
+        showNotification(response.message || 'Échec de la connexion', 'error');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      showNotification(error.response?.data?.message || 'Échec de la connexion', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -47,79 +120,57 @@ export default function LoginScreen() {
         <Text style={styles.subtitle}>Sign in to continue</Text>
       </View>
 
-      <View style={styles.form}>
-        {/* Email Input */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <View style={styles.inputWrapper}>
-            <Icon name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
+      <ScrollView contentContainerStyle={styles.form}>
+        <View style={styles.formContainer}>
+          <Text style={styles.title}>Connexion</Text>
+
+          <TextField
+            label="Email"
+            value={formData.email}
+            onChangeText={(text) => handleChange('email', text)}
+            error={errors.email}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
+          <TextField
+            label="Mot de passe"
+            value={formData.motDePasse}
+            onChangeText={(text) => handleChange('motDePasse', text)}
+            error={errors.motDePasse}
+            secureTextEntry
+          />
+
+          <Button
+            title="Se connecter"
+            onPress={handleSubmit}
+            loading={loading}
+            style={styles.submitButton}
+          />
+
+          <Button
+            title="Pas encore de compte ? S'inscrire"
+            onPress={() => router.replace('/register')}
+            type="secondary"
+            style={styles.registerButton}
+          />
         </View>
 
-        {/* Password Input */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.inputWrapper}>
-            <Icon name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-            />
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              style={styles.eyeIcon}
-            >
-              <Icon
-                name={showPassword ? "eye-outline" : "eye-off-outline"}
-                size={20}
-                color="#666"
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Login Button */}
-        <TouchableOpacity
-          style={[styles.loginButton, isLoading && styles.disabledButton]}
-          onPress={handleLogin}
-          disabled={isLoading}
+        <Animated.View
+          style={[
+            styles.notification,
+            {
+              opacity: notificationOpacity,
+              backgroundColor: notification.type === 'success' ? '#4CAF50' : '#f44336',
+            },
+          ]}
         >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.loginButtonText}>Sign In</Text>
-          )}
-        </TouchableOpacity>
-
-        {/* Sign Up Link */}
-        <View style={styles.signupContainer}>
-          <Text style={styles.signupText}>Dont have an account? </Text>
-          <TouchableOpacity onPress={() => router.push("/register")}>
-            <Text style={styles.signupLink}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Forgot Password */}
-        <TouchableOpacity style={styles.forgotPassword}>
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </TouchableOpacity>
-      </View>
+          <Text style={styles.notificationText}>{notification.message}</Text>
+        </Animated.View>
+      </ScrollView>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -145,72 +196,36 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 30,
   },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2c3e50",
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e1e8ed",
-    paddingHorizontal: 15,
-    height: 50,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
+  formContainer: {
     flex: 1,
-    fontSize: 16,
-    color: "#2c3e50",
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
-  eyeIcon: {
-    padding: 5,
-  },
-  loginButton: {
-    backgroundColor: "#4A90E2",
-    borderRadius: 12,
-    height: 50,
-    justifyContent: "center",
-    alignItems: "center",
+  submitButton: {
     marginTop: 20,
   },
-  disabledButton: {
-    opacity: 0.7,
+  registerButton: {
+    marginTop: 10,
   },
-  loginButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+  notification: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    padding: 15,
+    borderRadius: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  signupContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  signupText: {
-    color: '#666',
-    fontSize: 16,
-  },
-  signupLink: {
-    color: '#2196F3',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  forgotPassword: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  forgotPasswordText: {
-    color: '#2196F3',
+  notificationText: {
+    color: '#fff',
+    textAlign: 'center',
     fontSize: 16,
   },
 });
+
+export default LoginScreen;

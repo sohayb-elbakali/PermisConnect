@@ -1,37 +1,47 @@
 import React from "react";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, ViewStyle, TextStyle } from "react-native";
+import { Colors } from '../constants/Colors';
 
-interface ButtonProps {
+export interface ButtonProps {
   title: string;
   onPress: () => void;
-  style?: object;
-  textStyle?: object;
-  isLoading?: boolean;
+  type?: 'primary' | 'secondary';
+  loading?: boolean;
   disabled?: boolean;
+  style?: ViewStyle;
+  textStyle?: TextStyle;
 }
 
 const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
-  style,
-  textStyle,
-  isLoading = false,
+  type = 'primary',
+  loading = false,
   disabled = false,
+  style,
+  textStyle
 }) => {
   return (
     <TouchableOpacity
       style={[
         styles.button,
-        disabled && styles.buttonDisabled,
-        style,
+        type === 'secondary' ? styles.secondaryButton : styles.primaryButton,
+        disabled && styles.disabledButton,
+        style
       ]}
       onPress={onPress}
-      disabled={isLoading || disabled}
+      disabled={disabled || loading}
     >
-      {isLoading ? (
-        <ActivityIndicator color="#fff" />
+      {loading ? (
+        <ActivityIndicator color={type === 'primary' ? '#fff' : '#007AFF'} />
       ) : (
-        <Text style={[styles.text, textStyle]}>{title}</Text>
+        <Text style={[
+          styles.text,
+          type === 'secondary' ? styles.secondaryText : styles.primaryText,
+          textStyle
+        ]}>
+          {title}
+        </Text>
       )}
     </TouchableOpacity>
   );
@@ -39,20 +49,32 @@ const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#2196F3",
-    borderRadius: 5,
-    padding: 12,
+    padding: 16,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 10,
+    marginVertical: 8,
   },
-  buttonDisabled: {
-    backgroundColor: "#cccccc",
+  primaryButton: {
+    backgroundColor: "#007AFF",
+  },
+  secondaryButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#007AFF",
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   text: {
-    color: "#fff",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
+  },
+  primaryText: {
+    color: "#fff",
+  },
+  secondaryText: {
+    color: "#007AFF",
   },
 });
 
