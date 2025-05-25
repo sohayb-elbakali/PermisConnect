@@ -1,14 +1,19 @@
 import React, { createContext, ReactNode, useContext, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface User {
+  id: number;
   email: string;
-  // Add other user properties as needed
+  nom: string;
+  prenom: string;
+  role: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  login: (token: string) => Promise<void>;
+  logout: () => Promise<void>;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,20 +24,37 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const login = async (email: string, password: string): Promise<void> => {
-    // Implement login logic here
-    // For now, we'll just simulate a successful login
-    setUser({ email });
-    return Promise.resolve();
+  const login = async (token: string): Promise<void> => {
+    try {
+      await AsyncStorage.setItem('authToken', token);
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      if (userInfo) {
+        const parsedUser = JSON.parse(userInfo);
+        setUser(parsedUser);
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = async (): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem('userInfo');
+      setUser(null);
+      setIsAuthenticated(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw error;
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

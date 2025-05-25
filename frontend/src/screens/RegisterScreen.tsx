@@ -105,10 +105,10 @@ const RegisterScreen = () => {
       newErrors.dateNaissance = 'Format de date invalide (YYYY-MM-DD)';
     }
 
-    // Validate phone number (basic validation)
-    const phoneRegex = /^[0-9]{10}$/;
+    // Validate phone number (more flexible validation)
+    const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4}$/;
     if (formData.telephone && !phoneRegex.test(formData.telephone.replace(/\s/g, ''))) {
-      newErrors.telephone = 'Format de téléphone invalide (10 chiffres)';
+      newErrors.telephone = 'Format de téléphone invalide (ex: 0123456789 ou 01 23 45 67 89)';
     }
 
     setErrors(newErrors);
@@ -122,7 +122,12 @@ const RegisterScreen = () => {
 
     try {
       setLoading(true);
-      const response = await authService.register(formData);
+      // Format phone number before sending
+      const formattedData = {
+        ...formData,
+        telephone: formData.telephone.replace(/\s/g, '') // Remove spaces from phone number
+      };
+      const response = await authService.register(formattedData);
       
       if (response.success) {
         showNotification('Inscription réussie', 'success');
