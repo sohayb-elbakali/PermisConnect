@@ -33,8 +33,12 @@ public class SecurityConfig {
         http
                 // Disable CSRF protection
                 .csrf(csrf -> csrf.disable())
-                // Allow all requests (for debugging)
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+                // Configure security rules
+                .authorizeHttpRequests(auth -> auth
+                        // Allow Swagger UI and OpenAPI endpoints
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        // Allow all other requests (for now)
+                        .anyRequest().permitAll());
 
         return http.build();
     }
