@@ -32,6 +32,17 @@ class AutoEcoleService {
       throw error;
     }
   }
+
+  async assignUserToAutoEcole(userId: number, autoEcoleId: number): Promise<void> {
+    try {
+      await apiClient.put(`/clients/${userId}/autoecole`, {
+        autoEcoleId: autoEcoleId
+      });
+    } catch (error) {
+      console.error(`Error assigning user ${userId} to auto-école ${autoEcoleId}:`, error);
+      throw error;
+    }
+  }
 }
 
 export default new AutoEcoleService(); 

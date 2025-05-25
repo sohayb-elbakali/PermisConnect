@@ -14,27 +14,27 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import TextField from '../components/TextField';
 import Button from '../components/Button';
-import authService from '../services/authService';
+import { authService } from '../services/authService';
 import { Colors } from '../constants/Colors';
 
-const LoginScreen = () => {
+const LoginScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [notificationOpacity] = useState(new Animated.Value(0));
   const [formData, setFormData] = useState({
     email: '',
-    motDePasse: '',
+    password: ''
   });
   const [errors, setErrors] = useState({
     email: '',
-    motDePasse: '',
+    password: ''
   });
 
-  const { login, isLoading } = useAuth();
+  const { login } = useAuth();
 
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
@@ -70,7 +70,7 @@ const LoginScreen = () => {
   const validateForm = () => {
     const newErrors = {
       email: '',
-      motDePasse: '',
+      password: ''
     };
 
     if (!formData.email.trim()) {
@@ -79,8 +79,8 @@ const LoginScreen = () => {
       newErrors.email = 'Format d\'email invalide';
     }
 
-    if (!formData.motDePasse.trim()) {
-      newErrors.motDePasse = 'Le mot de passe est requis';
+    if (!formData.password.trim()) {
+      newErrors.password = 'Le mot de passe est requis';
     }
 
     setErrors(newErrors);
@@ -94,8 +94,12 @@ const LoginScreen = () => {
 
     try {
       setLoading(true);
+      console.log('Submitting login with:', formData);
       const response = await authService.login(formData);
-      if (response.success) {
+      console.log('Login response:', response);
+      
+      if (response.token) {
+        await login(response.token);
         showNotification('Connexion réussie', 'success');
         setTimeout(() => {
           router.replace('/autoecole-selection');
@@ -105,7 +109,7 @@ const LoginScreen = () => {
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      showNotification(error.response?.data?.message || 'Échec de la connexion', 'error');
+      showNotification(error.message || 'Échec de la connexion', 'error');
     } finally {
       setLoading(false);
     }
@@ -135,9 +139,9 @@ const LoginScreen = () => {
 
           <TextField
             label="Mot de passe"
-            value={formData.motDePasse}
-            onChangeText={(text) => handleChange('motDePasse', text)}
-            error={errors.motDePasse}
+            value={formData.password}
+            onChangeText={(text) => handleChange('password', text)}
+            error={errors.password}
             secureTextEntry
           />
 

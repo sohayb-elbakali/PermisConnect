@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface LoginCredentials {
   email: string;
-  motDePasse: string;  // Changed from password to match backend field name
+  password: string;
 }
 
 export interface RegisterCredentials {
@@ -32,139 +32,85 @@ export interface AuthResponse {
   token?: string;
 }
 
-class AuthService {
-  // Register new user
-  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
+export const authService = {
+  async register(credentials: RegisterCredentials) {
     try {
-      // Format the date to match backend format (YYYY-MM-DD)
-      const formattedCredentials = {
-        ...credentials,
-        dateNaissance: credentials.dateNaissance.split('T')[0] // Ensure date is in YYYY-MM-DD format
-      };
-
-      const response = await apiClient.post("/clients", formattedCredentials);
-
-      if (response.data) {
-        return {
-          success: true,
-          message: "Inscription réussie",
-          user: {
-            id: response.data.id,
-            name: `${response.data.prenom} ${response.data.nom}`,
-            email: response.data.email,
-            role: 'CLIENT'
-          }
-        };
-      }
-
-      return {
-        success: false,
-        message: "Échec de l'inscription",
-      };
+      console.log('Registration request payload:', credentials);
+      const response = await apiClient.post('/clients', credentials);
+      console.log('Registration response:', response.data);
+      return response.data;
     } catch (error: any) {
-      console.error("Registration error:", error);
-      // Handle specific error cases
+      console.error('Registration error:', error);
       if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        const errorMessage = error.response.data?.message || "Erreur lors de l'inscription";
-        return {
-          success: false,
-          message: errorMessage
-        };
-      } else if (error.request) {
-        // The request was made but no response was received
-        return {
-          success: false,
-          message: "Impossible de se connecter au serveur. Veuillez vérifier votre connexion internet."
-        };
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        return {
-          success: false,
-          message: "Une erreur est survenue. Veuillez réessayer."
-        };
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        
+        if (error.response.status === 409) {
+          throw new Error('Cet email est déjà utilisé. Veuillez utiliser une autre adresse email.');
+        }
       }
+      throw error;
     }
-  }
+  },
 
-  // Login user
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  async login(credentials: LoginCredentials) {
     try {
-      const response = await apiClient.post("/auth/login", credentials);
-
-      if (response.data.success && response.data.token) {
-        // Store token and user info
-        await AsyncStorage.setItem("authToken", response.data.token);
-
-        const userInfo = {
-          id: response.data.id,
-          name: `${response.data.prenom} ${response.data.nom}`,
-          email: response.data.email,
-          role: response.data.role
-        };
-
-        await AsyncStorage.setItem("userInfo", JSON.stringify(userInfo));
-
-        return {
-          success: true,
-          message: "Connexion réussie",
-          user: userInfo,
-          token: response.data.token,
-        };
+      console.log('Login attempt with:', credentials);
+      if (!credentials.password) {
+        throw new Error('Le mot de passe est requis');
       }
-
-      return {
-        success: false,
-        message: response.data.message || "Échec de la connexion",
+      
+      // Convert motDePasse to rawPassword for backend
+      const loginRequest = {
+        email: credentials.email,
+        password: credentials.password
       };
-    } catch (error: any) {
-      console.error("Login error:", error);
-      if (error.response) {
-        return {
-          success: false,
-          message: error.response.data?.message || "Échec de la connexion"
-        };
-      } else if (error.request) {
-        return {
-          success: false,
-          message: "Impossible de se connecter au serveur. Veuillez vérifier votre connexion internet."
-        };
-      } else {
-        return {
-          success: false,
-          message: "Une erreur est survenue. Veuillez réessayer."
-        };
+      
+      console.log('Login request payload:', loginRequest);
+      const response = await apiClient.post('/auth/login', loginRequest);
+      
+      console.log('Login response:', response.data);
+      
+      if (response.data.token) {
+        await AsyncStorage.setItem('authToken', response.data.token);
+        await AsyncStorage.setItem('userInfo', JSON.stringify(response.data.user));
       }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Login error:', error);
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        
+        if (error.response.status === 401) {
+          throw new Error('Email ou mot de passe incorrect');
+        }
+      }
+      throw error;
     }
-  }
+  },
 
-  // Logout user
-  async logout(): Promise<void> {
+  async logout() {
     try {
-      // Optional: Call logout endpoint
-      await apiClient.post("/auth/logout");
+      await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem('userInfo');
     } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      // Always clear local storage
-      await AsyncStorage.removeItem("authToken");
-      await AsyncStorage.removeItem("userInfo");
+      console.error('Logout error:', error);
+      throw error;
     }
-  }
+  },
 
-  // Get current user
-  async getCurrentUser(): Promise<User | null> {
+  async getCurrentUser() {
     try {
-      const userInfo = await AsyncStorage.getItem("userInfo");
+      const userInfo = await AsyncStorage.getItem('userInfo');
       return userInfo ? JSON.parse(userInfo) : null;
     } catch (error) {
-      console.error("Error getting user:", error);
+      console.error('Get current user error:', error);
       return null;
     }
-  }
+  },
 
-  // Check if authenticated
   async isAuthenticated(): Promise<boolean> {
     try {
       const token = await AsyncStorage.getItem("authToken");
@@ -173,6 +119,4 @@ class AuthService {
       return false;
     }
   }
-}
-
-export default new AuthService();
+};

@@ -2,18 +2,17 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
   TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import autoEcoleService, { AutoEcole } from '../services/autoEcoleService';
-import { Colors } from '../constants/Colors';
+import { authService } from '../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import apiClient from '../services/api';
 
 export default function AutoEcoleSelectionScreen() {
   const [autoEcoles, setAutoEcoles] = useState<AutoEcole[]>([]);
@@ -29,10 +28,11 @@ export default function AutoEcoleSelectionScreen() {
 
   const loadAutoEcoles = async () => {
     try {
-      const data = await autoEcoleService.getAllAutoEcoles();
-      setAutoEcoles(data);
+      const response = await autoEcoleService.getAllAutoEcoles();
+      setAutoEcoles(response);
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de charger les auto-écoles');
+      console.error('Error loading auto-écoles:', error);
+      Alert.alert('Erreur', 'Impossible de charger la liste des auto-écoles');
     } finally {
       setLoading(false);
     }
@@ -46,15 +46,23 @@ export default function AutoEcoleSelectionScreen() {
 
     try {
       setIsSearching(true);
-      const response = await apiClient.get(`/autoecoles/${autoEcoleId}`);
-      if (response.data) {
-        setSearchResults([response.data]);
-        setSelectedAutoEcole(response.data);
+      const id = parseInt(autoEcoleId, 10);
+      if (isNaN(id)) {
+        Alert.alert('Erreur', 'L\'ID doit être un nombre valide');
+        return;
+      }
+      const autoEcole = await autoEcoleService.getAutoEcoleById(id);
+      if (autoEcole) {
+        setSearchResults([autoEcole]);
+        setSelectedAutoEcole(autoEcole);
       } else {
-        Alert.alert('Erreur', 'Auto-école non trouvée');
+        Alert.alert('Erreur', 'Aucune auto-école trouvée avec cet ID');
+        setSearchResults([]);
       }
     } catch (error) {
+      console.error('Search error:', error);
       Alert.alert('Erreur', 'Impossible de trouver l\'auto-école');
+      setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
@@ -62,153 +70,174 @@ export default function AutoEcoleSelectionScreen() {
 
   const handleSelectAutoEcole = async (autoEcole: AutoEcole) => {
     try {
-      setSelectedAutoEcole(autoEcole);
-      // Store selected auto-école in AsyncStorage
+      setLoading(true);
+      // Save the selected auto-école in AsyncStorage
       await AsyncStorage.setItem('selectedAutoEcole', JSON.stringify(autoEcole));
       
       // Update user's auto-école in backend
       const userInfo = await AsyncStorage.getItem('userInfo');
       if (userInfo) {
         const user = JSON.parse(userInfo);
-        await apiClient.put(`/clients/${user.id}/autoecole`, {
-          autoEcoleId: autoEcole.id
-        });
+        await autoEcoleService.assignUserToAutoEcole(user.id, autoEcole.id);
       }
 
-      // Navigate to home page
-      router.replace('/home');
+      Alert.alert(
+        'Succès',
+        'Auto-école sélectionnée avec succès',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/home')
+          }
+        ]
+      );
     } catch (error) {
-      console.error('Error saving auto-école selection:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder la sélection');
+      console.error('Selection error:', error);
+      Alert.alert('Erreur', 'Impossible de sélectionner cette auto-école');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const renderAutoEcoleItem = ({ item }: { item: AutoEcole }) => (
+  const renderAutoEcoleItem = (autoEcole: AutoEcole) => (
     <TouchableOpacity
+      key={autoEcole.id}
       style={[
         styles.autoEcoleCard,
-        selectedAutoEcole?.id === item.id && styles.selectedAutoEcoleCard
+        selectedAutoEcole?.id === autoEcole.id && styles.selectedCard
       ]}
-      onPress={() => handleSelectAutoEcole(item)}
+      onPress={() => handleSelectAutoEcole(autoEcole)}
     >
-      <Text style={styles.autoEcoleName}>{item.nom}</Text>
-      <Text style={styles.autoEcoleAddress}>{item.adresse}</Text>
-      <Text style={styles.autoEcolePhone}>{item.telephone}</Text>
+      <Text style={styles.autoEcoleName}>{autoEcole.nom}</Text>
+      <Text style={styles.autoEcoleAddress}>{autoEcole.adresse}</Text>
+      <Text style={styles.autoEcolePhone}>{autoEcole.telephone}</Text>
     </TouchableOpacity>
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.light.tint} />
+        <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Sélectionnez votre auto-école</Text>
-
+    <ScrollView style={styles.container}>
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Entrez l'ID de l'auto-école"
-          value={autoEcoleId}
-          onChangeText={setAutoEcoleId}
-          keyboardType="numeric"
-        />
-        <TouchableOpacity
-          style={styles.searchButton}
-          onPress={handleSearch}
-          disabled={isSearching}
-        >
-          {isSearching ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.searchButtonText}>Rechercher</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+        <Text style={styles.title}>Sélectionner votre auto-école</Text>
+        
+        <View style={styles.searchBox}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Entrez l'ID de l'auto-école"
+            value={autoEcoleId}
+            onChangeText={setAutoEcoleId}
+            keyboardType="numeric"
+          />
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={handleSearch}
+            disabled={isSearching}
+          >
+            <Text style={styles.searchButtonText}>
+              {isSearching ? 'Recherche...' : 'Rechercher'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      <FlatList
-        data={searchResults.length > 0 ? searchResults : autoEcoles}
-        renderItem={renderAutoEcoleItem}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContainer}
-      />
-    </View>
+        {searchResults.length > 0 ? (
+          <View style={styles.resultsContainer}>
+            <Text style={styles.sectionTitle}>Résultat de la recherche</Text>
+            {searchResults.map(renderAutoEcoleItem)}
+          </View>
+        ) : (
+          <View style={styles.listContainer}>
+            <Text style={styles.sectionTitle}>Liste des auto-écoles</Text>
+            {autoEcoles.map(renderAutoEcoleItem)}
+          </View>
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
+    backgroundColor: '#f8f9fa',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  searchContainer: {
+    padding: 20,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: Colors.light.tint,
     marginBottom: 20,
+    color: '#2c3e50',
   },
-  searchContainer: {
+  searchBox: {
     flexDirection: 'row',
     marginBottom: 20,
   },
   searchInput: {
     flex: 1,
-    height: 50,
     borderWidth: 1,
-    borderColor: '#e1e8ed',
-    borderRadius: 8,
-    paddingHorizontal: 15,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
     marginRight: 10,
-    fontSize: 16,
+    backgroundColor: '#fff',
   },
   searchButton: {
-    backgroundColor: Colors.light.tint,
-    height: 50,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
     justifyContent: 'center',
-    alignItems: 'center',
   },
   searchButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
+  },
+  resultsContainer: {
+    marginTop: 20,
   },
   listContainer: {
-    paddingBottom: 20,
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#2c3e50',
   },
   autoEcoleCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e1e8ed',
+    borderColor: '#ddd',
   },
-  selectedAutoEcoleCard: {
-    borderColor: Colors.light.tint,
-    backgroundColor: '#e3f2fd',
+  selectedCard: {
+    borderColor: '#007AFF',
+    borderWidth: 2,
   },
   autoEcoleName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2c3e50',
-    marginBottom: 8,
+    marginBottom: 5,
   },
   autoEcoleAddress: {
     fontSize: 14,
     color: '#7f8c8d',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   autoEcolePhone: {
     fontSize: 14,
