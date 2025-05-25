@@ -1,84 +1,52 @@
 package com.perm.config;
+
+import com.perm.security.CustomUserDetailsService;
 import com.perm.security.JwtAuthenticationFilter;
-
+import com.perm.security.JwtTokenProvider;
 import org.springframework.context.annotation.Bean;
-
 import org.springframework.context.annotation.Configuration;
-
-import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
-
 import org.springframework.security.web.SecurityFilterChain;
-
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.perm.security.JwtTokenProvider;
-
-
-
 @Configuration
-
 @EnableWebSecurity
-
 public class SecurityConfig {
 
-
-
+    private final CustomUserDetailsService userDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
 
-
-
-    public SecurityConfig(JwtTokenProvider jwtTokenProvider) {
-
+    public SecurityConfig(CustomUserDetailsService userDetailsService, JwtTokenProvider jwtTokenProvider) {
+        this.userDetailsService = userDetailsService;
         this.jwtTokenProvider = jwtTokenProvider;
-
     }
-
-
-
-    @Bean
-
-    public PasswordEncoder passwordEncoder() {
-
-        return new BCryptPasswordEncoder();
-
-    }
-
-
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // Disable CSRF protection
                 .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
-                        // Chemins Swagger
-                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**", "/swagger-resources/**", "/v3/api-docs/**", "/webjars/**").permitAll()
-                        // For testing, allow specific endpoints without authentication (remove in production)
-                        .requestMatchers(HttpMethod.POST, "/api/autoecoles/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/autoecoles/**").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/autoecoles/**").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/api/autoecoles/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/users/**").permitAll()// Added this line to permit admin creation
-                        .requestMatchers(HttpMethod.GET, "/api/users/admins").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
-                        UsernamePasswordAuthenticationFilter.class);
+                // Allow all requests (for debugging)
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
 
         return http.build();
     }
-    // Other security configurations...
 
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 }
-
 

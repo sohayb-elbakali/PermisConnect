@@ -140,18 +140,39 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public Client createClient(UserRequest clientRequest) {
-        Client client = new Client();
-        client.setNom(clientRequest.getNom());
-        client.setPrenom(clientRequest.getPrenom());
-        client.setEmail(clientRequest.getEmail());
-        client.setMotDePasse(passwordEncoder.encode(clientRequest.getMotDePasse()));
-        client.setTelephone(clientRequest.getTelephone());
-        client.setDateCreation(LocalDateTime.now());
-        client.setDateInscription(LocalDateTime.now());
-        client.setStatut(clientRequest.getStatut());
-        client.setProgression(0.0); // Valeur initiale de la progression
+        try {
+            // Log all fields for debugging
+            System.out.println("Creating client with data:");
+            System.out.println("Nom: " + clientRequest.getNom());
+            System.out.println("Prenom: " + clientRequest.getPrenom());
+            System.out.println("Email: " + clientRequest.getEmail());
+            System.out.println("Telephone: " + clientRequest.getTelephone());
+            System.out.println("Statut: " + clientRequest.getStatut());
 
-        return clientRepository.save(client);
+            // Check if email already exists using existsByEmail method
+            if (userRepository.existsByEmail(clientRequest.getEmail())) {
+                throw new RuntimeException("Email already in use: " + clientRequest.getEmail());
+            }
+
+            Client client = new Client();
+            client.setNom(clientRequest.getNom());
+            client.setPrenom(clientRequest.getPrenom());
+            client.setEmail(clientRequest.getEmail());
+            client.setMotDePasse(passwordEncoder.encode(clientRequest.getMotDePasse()));
+            client.setTelephone(clientRequest.getTelephone());
+            client.setDateCreation(LocalDateTime.now());
+            client.setDateInscription(LocalDateTime.now());
+            client.setStatut(clientRequest.getStatut() != null ? clientRequest.getStatut() : "ACTIF");
+            client.setProgression(0.0); // Valeur initiale de la progression
+            client.setAutoEcole(null); // Explicitly set to null until the client selects an auto-école
+
+            System.out.println("Saving client...");
+            return clientRepository.save(client);
+        } catch (Exception e) {
+            System.out.println("Error creating client: " + e.getMessage());
+            e.printStackTrace();
+            throw e; // Re-throw to be handled by controller
+        }
     }
 
     @Override

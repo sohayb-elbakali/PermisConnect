@@ -1,13 +1,22 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Replace with your actual API URL
-const API_BASE_URL = "http://192.168.1.100:3000/api"; // Use your computer's IP for mobile testing
-// const API_BASE_URL = 'http://localhost:3000/api'; // For web testing
+// Choose one of these API URLs based on your setup
+// For web browser running on the same machine as backend:
+const API_BASE_URL = 'http://localhost:8080/api';
+
+// Use your actual machine's local IP address if testing from a physical device
+// const API_BASE_URL = "http://192.168.1.100:8080/api";
+
+// When testing with an Android emulator:
+// const API_BASE_URL = 'http://10.0.2.2:8080/api';
+
+// For debugging only - to see which URL is being used
+console.log('API URL:', API_BASE_URL);
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 20000, // Increased timeout for debugging
   headers: {
     "Content-Type": "application/json",
   },
