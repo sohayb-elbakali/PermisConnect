@@ -1,54 +1,67 @@
 import React from "react";
 import { View, TextInput, Text, StyleSheet } from "react-native";
 
-interface TextFieldProps {
+export interface TextFieldProps {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
+  error?: string;
+  placeholder?: string;
   secureTextEntry?: boolean;
-  errorMessage?: string;
+  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
 
 const TextField: React.FC<TextFieldProps> = ({
   label,
   value,
   onChangeText,
-  secureTextEntry = false,
-  errorMessage,
+  error,
+  placeholder,
+  secureTextEntry,
+  keyboardType = 'default',
+  autoCapitalize = 'sentences'
 }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, error ? styles.inputError : null]}
         value={value}
         onChangeText={onChangeText}
+        placeholder={placeholder}
         secureTextEntry={secureTextEntry}
-        autoCapitalize="none"
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
       />
-      {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 10,
+    marginBottom: 16,
   },
   label: {
     fontSize: 16,
-    marginBottom: 5,
+    marginBottom: 8,
+    color: '#333',
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 10,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
     fontSize: 16,
   },
-  error: {
-    color: "red",
-    marginTop: 5,
+  inputError: {
+    borderColor: '#ff3b30',
+  },
+  errorText: {
+    color: '#ff3b30',
+    fontSize: 14,
+    marginTop: 4,
   },
 });
 
