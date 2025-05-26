@@ -69,8 +69,14 @@ public class CourseService {
     public TheoreticalCourseProgress getTheoreticalCourseProgress(Long clientId) {
         // Find all theoretical courses (both public and private)
         List<Cours> allTheoreticalCourses = coursRepository.findAll().stream()
-            .filter(course -> (course instanceof CoursPublic && "Théorie".equals(((CoursPublic) course).getCategorie())) ||
-                             (course instanceof CoursPrive && "Théorie".equals(((CoursPrive) course).getType())))
+            .filter(course -> {
+                if (course instanceof CoursPublic) {
+                    return "Théorie".equals(((CoursPublic) course).getCategorie());
+                } else if (course instanceof CoursPrive) {
+                    return "Théorie".equals(((CoursPrive) course).getType());
+                }
+                return false;
+            })
             .collect(Collectors.toList());
 
         // Find courses viewed by the client
@@ -84,9 +90,16 @@ public class CourseService {
             .filter(course -> viewedCourseIds.contains(course.getId()))
             .count();
 
-        int totalTheoreticalCount = allTheoreticalCourses.size();
+        // Set a fixed total of 40 courses for theoretical progress
+        int totalTheoreticalCount = 40;
 
-        return new TheoreticalCourseProgress(totalTheoreticalCount, (int) viewedTheoreticalCount);
+        // Calculate the actual progress percentage based on viewed courses
+        int viewedCount = (int) viewedTheoreticalCount;
+        if (viewedCount > totalTheoreticalCount) {
+            viewedCount = totalTheoreticalCount; // Cap at 100%
+        }
+
+        return new TheoreticalCourseProgress(totalTheoreticalCount, viewedCount);
     }
 
     // Helper class to return theoretical course progress

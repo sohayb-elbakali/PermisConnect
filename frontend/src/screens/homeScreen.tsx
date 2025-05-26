@@ -20,6 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { API_URL } from "../config";
 import { useAuth } from '../contexts/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface UserInfo {
   id: number;
@@ -54,47 +55,58 @@ export default function HomeScreen() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [theoreticalProgress, setTheoreticalProgress] = useState<TheoreticalProgress>({
-    totalTheoreticalCourses: 0,
+    totalTheoreticalCourses: 40, // Fixed total of 40 courses
     viewedTheoreticalCourses: 0
   });
+  const [lastBlancTestScore, setLastBlancTestScore] = useState<number | null>(null);
 
   useEffect(() => {
-    loadUserInfo();
-    if (user?.id) {
-      fetchTheoreticalProgress(user.id);
-    }
-  }, [user?.id]);
-
-  const loadUserInfo = async () => {
-    try {
-      const userInfoStr = await AsyncStorage.getItem("userInfo");
-      if (userInfoStr) {
-        const userData = JSON.parse(userInfoStr);
-        const token = await AsyncStorage.getItem("token");
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
-
-        // Fetch user info
-        const userResponse = await axios.get(`${API_URL}/clients/${userData.id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+    const fetchUserInfoAndProgress = async () => {
+      try {
+        const userInfoStr = await AsyncStorage.getItem("userInfo");
+        if (userInfoStr) {
+          const userData = JSON.parse(userInfoStr);
+          const token = await AsyncStorage.getItem("token");
+          if (!token) {
+            throw new Error("No authentication token found");
           }
-        });
 
-        if (userResponse.data) {
-          setUserInfo(userResponse.data);
-          console.log('User Info loaded:', userResponse.data);
+          // Fetch user info
+          const userResponse = await axios.get(`${API_URL}/clients/${userData.id}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (userResponse.data) {
+            setUserInfo(userResponse.data);
+            console.log('User Info loaded:', userResponse.data);
+          }
         }
+      } catch (error) {
+        console.error("Error loading user info:", error);
+        Alert.alert("Error", "Failed to load user information. Please try again.");
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error loading user info:", error);
-      Alert.alert("Error", "Failed to load user information. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      if (userInfo && userInfo.id) {
+        fetchTheoreticalProgress(userInfo.id);
+      }
+    };
+    fetchUserInfoAndProgress();
+  }, [userInfo?.id]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchLastBlancTestScore = async () => {
+        const score = await AsyncStorage.getItem('lastBlancTestScore');
+        if (score) setLastBlancTestScore(Number(score));
+      };
+      fetchLastBlancTestScore();
+    }, [])
+  );
 
   const fetchTheoreticalProgress = async (clientId: number) => {
     console.log('Attempting to fetch theoretical progress for client:', clientId);
@@ -102,18 +114,29 @@ export default function HomeScreen() {
       setLoading(true);
       const response = await axios.get(`${API_URL}/api/courses/progress/theoretical/${clientId}`);
       console.log('Theoretical progress response:', response.data);
-      setTheoreticalProgress(response.data);
+      
+      // Simulate progress based on actual viewed courses
+      const actualViewedCourses = response.data.viewedTheoreticalCourses;
+      const simulatedProgress = Math.min(actualViewedCourses, 40); // Cap at 40 courses
+      
+      setTheoreticalProgress({
+        totalTheoreticalCourses: 40, // Fixed total
+        viewedTheoreticalCourses: simulatedProgress
+      });
     } catch (error) {
       console.error('Error fetching theoretical progress:', error);
       Alert.alert('Error', 'Failed to load course progress');
-      setTheoreticalProgress({ totalTheoreticalCourses: 0, viewedTheoreticalCourses: 0 });
+      setTheoreticalProgress({ 
+        totalTheoreticalCourses: 40, 
+        viewedTheoreticalCourses: 0 
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const calculateProgress = () => {
-    if (theoreticalProgress.totalTheoreticalCourses === 0) return 0;
+    // Calculate percentage based on simulated progress
     return (theoreticalProgress.viewedTheoreticalCourses / theoreticalProgress.totalTheoreticalCourses) * 100;
   };
 
@@ -169,6 +192,8 @@ export default function HomeScreen() {
     }
   };
 
+  console.log('lastBlancTestScore for ProgressCircle:', lastBlancTestScore);
+
   if (loading && !userInfo) {
     return (
       <View style={styles.loadingContainer}>
@@ -195,7 +220,11 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.progressContainer}>
-          <TouchableOpacity activeOpacity={0.8} onPress={handleTheoryPress}>
+          <TouchableOpacity 
+            activeOpacity={0.7} 
+            onPress={handleTheoryPress}
+            style={styles.progressCircleContainer}
+          >
             <ProgressCircle
               size={120}
               strokeWidth={10}
@@ -206,54 +235,36 @@ export default function HomeScreen() {
             />
           </TouchableOpacity>
 
-          <TouchableOpacity activeOpacity={0.8} onPress={handlePilotagePress}>
+          <TouchableOpacity 
+            activeOpacity={0.7} 
+            onPress={() => router.push('/test-blanc-viewer')}
+            style={styles.progressCircleContainer}
+          >
             <ProgressCircle
               size={120}
               strokeWidth={10}
-              progress={80}
+              progress={lastBlancTestScore !== null ? Math.round(lastBlancTestScore) : 0}
               color="#ff6b35"
-              icon="car-outline"
-              label="DRIVING TEST"
+              icon="document-text-outline"
+              label="BLANC TEST"
             />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
-          style={styles.blancTestContainer}
-          onPress={() => router.push('/test-blanc-viewer')}
-        >
-          <View style={styles.blancTestContent}>
-            <Text style={styles.blancTestText}>blanc test</Text>
-            <View style={styles.blancTestProgressContainer}>
-              <ProgressCircle
-                size={50}
-                strokeWidth={4}
-                progress={65}
-                color="#4CAF50"
-                icon=""
-                label=""
-              />
-              <Text style={styles.blancTestProgressText}>65%</Text>
-            </View>
+        <View style={styles.drivingPerformanceContainer}>
+          <Text style={styles.drivingPerformanceTitle}>Driving Performance</Text>
+          <View style={styles.progressBarContainer}>
+            <View 
+              style={[
+                styles.progressBar, 
+                { width: '75%', backgroundColor: '#4CAF50' }
+              ]} 
+            />
           </View>
-        </TouchableOpacity>
-
-        <View style={styles.bottomButtonsContainer}>
-          <TouchableOpacity
-            style={[styles.actionButton, { marginRight: 10, flex: 1 }]}
-            onPress={() => router.push('/profile')}
-          >
-            <Icon name="person-outline" size={24} color="#fff" />
-            <Text style={styles.actionButtonText}>My Profile</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, { marginLeft: 10, flex: 1 }]}
-            onPress={handleLogout}
-          >
-            <Icon name="log-out-outline" size={24} color="#fff" />
-            <Text style={styles.actionButtonText}>Logout</Text>
-          </TouchableOpacity>
+          <View style={styles.performanceDetails}>
+            <Text style={styles.performanceNote}>Note: 15/20</Text>
+            <Text style={styles.performanceLabel}>Good Progress</Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -298,77 +309,61 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 20,
   },
-  blancTestContainer: {
-    backgroundColor: '#d1dabf',
-    borderRadius: 6,
-    padding: 6,
-    marginHorizontal: 20,
-    marginTop: 0,
-    marginBottom: 15,
+  progressCircleContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 100,
+    padding: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+    // Add a subtle border
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
-  blancTestContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  blancTestText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    flex: 1,
-    marginRight: 10,
-  },
-  blancTestProgressContainer: {
-    alignItems: 'center',
-  },
-  blancTestProgressText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7a0c0c',
-    marginTop: 3,
-  },
-  bottomButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4CAF50',
-    padding: 15,
+  drivingPerformanceContainer: {
+    backgroundColor: '#fff',
     borderRadius: 10,
-    shadowColor: '#ffffff',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    padding: 20,
+    margin: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowRadius: 4,
     elevation: 3,
   },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  progressText: {
-    fontSize: 24,
+  drivingPerformanceTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 15,
   },
-  progressLabel: {
+  progressBarContainer: {
+    height: 20,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 10,
+  },
+  performanceDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  performanceNote: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  performanceLabel: {
     fontSize: 14,
     color: '#666',
   },
