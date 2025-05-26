@@ -1,4 +1,4 @@
-package com.permisconnecte.cloudinary.service;
+package com.autoecole.services;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;

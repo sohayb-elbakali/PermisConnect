@@ -1,6 +1,6 @@
-package com.permisconnecte.cloudinary.controller;
+package com.autoecole.controllers;
 
-import com.permisconnecte.cloudinary.service.CloudinaryService;
+import com.autoecole.services.CloudinaryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
