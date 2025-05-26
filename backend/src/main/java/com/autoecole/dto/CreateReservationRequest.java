@@ -14,6 +14,9 @@ public class CreateReservationRequest {
     @NotNull(message = "Time Slot ID is required")
     private Long timeSlotId;
 
+    @NotNull(message = "Course ID is required")
+    private Long coursId;
+
     private Long moniteurId;
 
     @NotNull(message = "Reservation date is required")

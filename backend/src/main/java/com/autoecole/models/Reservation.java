@@ -31,6 +31,11 @@ public class Reservation {
     @JsonBackReference(value = "moniteur-reservations")
     private Moniteur moniteur;
 
+    @ManyToOne
+    @JoinColumn(name = "cours_id")
+    @NotNull
+    private Cours cours;
+
     @OneToOne
     @JoinColumn(name = "time_slot_id")
     private TimeSlot timeSlot;

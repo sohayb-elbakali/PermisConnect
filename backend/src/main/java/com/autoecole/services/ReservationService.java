@@ -18,6 +18,7 @@ public class ReservationService {
     private final ClientRepository clientRepository;
     private final MoniteurRepository moniteurRepository;
     private final TimeSlotRepository timeSlotRepository;
+    private final CoursRepository coursRepository;
 
     @Transactional
     public Reservation createReservation(CreateReservationRequest request) {
@@ -26,6 +27,9 @@ public class ReservationService {
         
         TimeSlot timeSlot = timeSlotRepository.findById(request.getTimeSlotId())
                 .orElseThrow(() -> new EntityNotFoundException("Time slot not found"));
+        
+        Cours cours = coursRepository.findById(request.getCoursId())
+                .orElseThrow(() -> new EntityNotFoundException("Course not found"));
         
         Moniteur moniteur = timeSlot.getMoniteur();
         
@@ -38,6 +42,7 @@ public class ReservationService {
         reservation.setClient(client);
         reservation.setMoniteur(moniteur);
         reservation.setTimeSlot(timeSlot);
+        reservation.setCours(cours);
         reservation.setDateReservation(timeSlot.getStartTime());
         reservation.setStatut(Reservation.ReservationStatus.PENDING);
         
