@@ -17,7 +17,8 @@ public class CorsConfig {
         // Allow all origins for development
         config.addAllowedOrigin("http://localhost:3000"); // React default port
         config.addAllowedOrigin("http://localhost:4200");
-        config.addAllowedOrigin("http://localhost:8082"); // Add your React Native port// Angular default port
+        config.addAllowedOrigin("http://localhost:8082");
+        config.addAllowedOrigin("http://localhost:8081");// Add your React Native port// Angular default port
         
         // Allow all HTTP methods
         config.addAllowedMethod("*");
