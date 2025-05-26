@@ -56,6 +56,7 @@ public class UploadController {
             logger.info("Cloudinary upload result: {}", uploadResult);
 
             String cloudinaryUrl = (String) uploadResult.get("url");
+            String fileType = (String) uploadResult.get("resource_type");
 
             if (cloudinaryUrl == null) {
                 logger.error("Cloudinary upload failed: No URL returned.");
@@ -99,6 +100,7 @@ public class UploadController {
             course.setDescription(courseUploadDto.getDescription());
             course.setCourseType(courseUploadDto.getCourseType());
             course.setCloudinaryUrl(cloudinaryUrl);
+            course.setFileType(fileType);
 
             // Set default or placeholder values for mandatory fields in Cours if not in DTO
             logger.debug("Setting default/placeholder fields for course.");

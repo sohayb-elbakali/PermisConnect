@@ -15,6 +15,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config';
 import Header from '../components/Header';
+import { useRouter } from 'expo-router';
 
 interface Course {
   id: number;
@@ -22,6 +23,7 @@ interface Course {
   description: string;
   cloudinaryUrl: string;
   courseType: 'PUBLIC' | 'PRIVATE';
+  fileType: string;
   // Add other fields as needed from your backend Course entity
 }
 
@@ -40,6 +42,7 @@ export default function CoursesScreen() {
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const loadUserInfoAndCourses = async () => {
@@ -98,9 +101,9 @@ export default function CoursesScreen() {
     loadUserInfoAndCourses();
   }, []);
 
-  const handleCoursePress = (url: string) => {
-    if (url) {
-      Linking.openURL(url).catch(err => console.error('Failed to open URL:', err));
+  const handleCoursePress = (course: Course) => {
+    if (course.cloudinaryUrl) {
+      router.push({ pathname: '/course-viewer', params: { cloudinaryUrl: course.cloudinaryUrl, fileType: course.fileType } });
     } else {
       Alert.alert('Error', 'Course material URL not available.');
     }
@@ -125,7 +128,7 @@ export default function CoursesScreen() {
         data={courses}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.courseItem} onPress={() => handleCoursePress(item.cloudinaryUrl)}>
+          <TouchableOpacity style={styles.courseItem} onPress={() => handleCoursePress(item)}>
             <Text style={styles.courseTitle}>{item.titre}</Text>
             <Text style={styles.courseDescription}>{item.description}</Text>
             {/* You might add an icon or indicator for course type */}

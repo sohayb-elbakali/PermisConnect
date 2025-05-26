@@ -4,7 +4,9 @@
       [
         "expo-font",
         {
-          "fonts": ["./assets/fonts/FiraSans-MediumItalic.ttf"],
+          "fonts": [
+            "./assets/fonts/FiraSans-MediumItalic.ttf"
+          ],
           "android": {
             "fonts": [
               {
@@ -30,7 +32,8 @@
             ]
           }
         }
-      ]
+      ],
+      "react-native-video"
     ]
   }
 }
