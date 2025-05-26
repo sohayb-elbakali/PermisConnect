@@ -98,14 +98,21 @@ const LoginScreen = ({ navigation }: any) => {
       const response = await authService.login(formData);
       console.log('Login response:', response);
       
-      if (response.token) {
-        await login(response.token);
+      if (response) {
+        // Generate token from response
+        const token = btoa(JSON.stringify({
+          id: response.id,
+          email: response.user.email,
+          timestamp: new Date().getTime()
+        }));
+
+        await login(token);
         showNotification('Connexion réussie', 'success');
         setTimeout(() => {
           router.replace('/autoecole-selection');
         }, 2000);
       } else {
-        showNotification(response.message || 'Échec de la connexion', 'error');
+        showNotification('Échec de la connexion', 'error');
       }
     } catch (error: any) {
       console.error('Login error:', error);
