@@ -14,7 +14,8 @@ module.exports = function(api) {
             '@assets': './src/assets',
             '@services': './src/services'
           }
-        }]
+        }],
+        '@babel/plugin-transform-class-static-block'
       ]
     };
   };
