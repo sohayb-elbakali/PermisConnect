@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import autoEcoleService, { AutoEcole } from '../services/autoEcoleService';
-import { authService } from '../services/authService';
+import userService, { User } from '../services/userService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AutoEcoleSelectionScreen() {
@@ -22,10 +22,25 @@ export default function AutoEcoleSelectionScreen() {
   const [searchResults, setSearchResults] = useState<AutoEcole[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     loadAutoEcoles();
+    loadUser();
   }, []);
+
+  const loadUser = async () => {
+    try {
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      if (userInfo) {
+        const userData = JSON.parse(userInfo);
+        const userDetails = await userService.getUserById(userData.id);
+        setUser(userDetails);
+      }
+    } catch (error) {
+      console.error('Error loading user:', error);
+    }
+  };
 
   const loadAutoEcoles = async () => {
     try {
@@ -95,25 +110,10 @@ export default function AutoEcoleSelectionScreen() {
     }
   };
 
-  const renderAutoEcoleItem = (autoEcole: AutoEcole) => (
-    <TouchableOpacity
-      key={autoEcole.id}
-      style={[
-        styles.autoEcoleCard,
-        selectedAutoEcole?.id === autoEcole.id && styles.selectedCard
-      ]}
-      onPress={() => setSelectedAutoEcole(autoEcole)}
-    >
-      <Text style={styles.autoEcoleName}>{autoEcole.nom}</Text>
-      <Text style={styles.autoEcoleAddress}>{autoEcole.adresse}</Text>
-      <Text style={styles.autoEcolePhone}>{autoEcole.telephone}</Text>
-    </TouchableOpacity>
-  );
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#ff6b35" />
       </View>
     );
   }
@@ -121,6 +121,9 @@ export default function AutoEcoleSelectionScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.searchContainer}>
+        {user && (
+          <Text style={styles.greeting}>Bonjour, {user.prenom} {user.nom}</Text>
+        )}
         <Text style={styles.title}>Sélectionner votre auto-école</Text>
         
         <View style={styles.searchBox}>
@@ -148,7 +151,20 @@ export default function AutoEcoleSelectionScreen() {
         {showResults && searchResults.length > 0 && (
           <View style={styles.resultsContainer}>
             <Text style={styles.sectionTitle}>Résultat de la recherche</Text>
-            {searchResults.map(renderAutoEcoleItem)}
+            {searchResults.map((autoEcole) => (
+              <TouchableOpacity
+                key={autoEcole.id}
+                style={[
+                  styles.autoEcoleCard,
+                  selectedAutoEcole?.id === autoEcole.id && styles.selectedCard
+                ]}
+                onPress={() => setSelectedAutoEcole(autoEcole)}
+              >
+                <Text style={styles.autoEcoleName}>{autoEcole.nom}</Text>
+                <Text style={styles.autoEcoleAddress}>{autoEcole.adresse}</Text>
+                <Text style={styles.autoEcolePhone}>{autoEcole.telephone}</Text>
+              </TouchableOpacity>
+            ))}
             
             <TouchableOpacity
               style={styles.validateButton}
@@ -177,6 +193,12 @@ const styles = StyleSheet.create({
   searchContainer: {
     padding: 20,
   },
+  greeting: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 10,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -197,7 +219,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   searchButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#ff6b35',
     padding: 10,
     borderRadius: 5,
     justifyContent: 'center',
@@ -224,7 +246,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   selectedCard: {
-    borderColor: '#007AFF',
+    borderColor: '#ff6b35',
     borderWidth: 2,
   },
   autoEcoleName: {
@@ -243,7 +265,7 @@ const styles = StyleSheet.create({
     color: '#7f8c8d',
   },
   validateButton: {
-    backgroundColor: '#28a745',
+    backgroundColor: '#ff6b35',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
