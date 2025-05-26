@@ -21,6 +21,7 @@ export default function AutoEcoleSelectionScreen() {
   const [autoEcoleId, setAutoEcoleId] = useState('');
   const [searchResults, setSearchResults] = useState<AutoEcole[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     loadAutoEcoles();
@@ -55,45 +56,40 @@ export default function AutoEcoleSelectionScreen() {
       if (autoEcole) {
         setSearchResults([autoEcole]);
         setSelectedAutoEcole(autoEcole);
+        setShowResults(true);
       } else {
         Alert.alert('Erreur', 'Aucune auto-école trouvée avec cet ID');
         setSearchResults([]);
+        setShowResults(false);
       }
     } catch (error) {
       console.error('Search error:', error);
       Alert.alert('Erreur', 'Impossible de trouver l\'auto-école');
       setSearchResults([]);
+      setShowResults(false);
     } finally {
       setIsSearching(false);
     }
   };
 
-  const handleSelectAutoEcole = async (autoEcole: AutoEcole) => {
+  const handleValidate = async () => {
+    if (!selectedAutoEcole) {
+      Alert.alert('Erreur', 'Veuillez d\'abord rechercher et sélectionner une auto-école');
+      return;
+    }
+
     try {
       setLoading(true);
-      // Save the selected auto-école in AsyncStorage
-      await AsyncStorage.setItem('selectedAutoEcole', JSON.stringify(autoEcole));
       
-      // Update user's auto-école in backend
-      const userInfo = await AsyncStorage.getItem('userInfo');
-      if (userInfo) {
-        const user = JSON.parse(userInfo);
-        await autoEcoleService.assignUserToAutoEcole(user.id, autoEcole.id);
-      }
-
-      Alert.alert(
-        'Succès',
-        'Auto-école sélectionnée avec succès',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/home')
-          }
-        ]
-      );
+      // Save the selected auto-école in AsyncStorage
+      await AsyncStorage.setItem('selectedAutoEcole', JSON.stringify(selectedAutoEcole));
+      
+      // Navigate to home screen
+      router.replace('/home');
+      
     } catch (error) {
-      console.error('Selection error:', error);
-      Alert.alert('Erreur', 'Impossible de sélectionner cette auto-école');
+      console.error('Validation error:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue');
     } finally {
       setLoading(false);
     }
@@ -106,7 +102,7 @@ export default function AutoEcoleSelectionScreen() {
         styles.autoEcoleCard,
         selectedAutoEcole?.id === autoEcole.id && styles.selectedCard
       ]}
-      onPress={() => handleSelectAutoEcole(autoEcole)}
+      onPress={() => setSelectedAutoEcole(autoEcole)}
     >
       <Text style={styles.autoEcoleName}>{autoEcole.nom}</Text>
       <Text style={styles.autoEcoleAddress}>{autoEcole.adresse}</Text>
@@ -132,7 +128,10 @@ export default function AutoEcoleSelectionScreen() {
             style={styles.searchInput}
             placeholder="Entrez l'ID de l'auto-école"
             value={autoEcoleId}
-            onChangeText={setAutoEcoleId}
+            onChangeText={(text) => {
+              setAutoEcoleId(text);
+              setShowResults(false);
+            }}
             keyboardType="numeric"
           />
           <TouchableOpacity
@@ -146,15 +145,18 @@ export default function AutoEcoleSelectionScreen() {
           </TouchableOpacity>
         </View>
 
-        {searchResults.length > 0 ? (
+        {showResults && searchResults.length > 0 && (
           <View style={styles.resultsContainer}>
             <Text style={styles.sectionTitle}>Résultat de la recherche</Text>
             {searchResults.map(renderAutoEcoleItem)}
-          </View>
-        ) : (
-          <View style={styles.listContainer}>
-            <Text style={styles.sectionTitle}>Liste des auto-écoles</Text>
-            {autoEcoles.map(renderAutoEcoleItem)}
+            
+            <TouchableOpacity
+              style={styles.validateButton}
+              onPress={handleValidate}
+              disabled={!selectedAutoEcole}
+            >
+              <Text style={styles.validateButtonText}>Valider</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -207,9 +209,6 @@ const styles = StyleSheet.create({
   resultsContainer: {
     marginTop: 20,
   },
-  listContainer: {
-    marginTop: 20,
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -242,5 +241,17 @@ const styles = StyleSheet.create({
   autoEcolePhone: {
     fontSize: 14,
     color: '#7f8c8d',
+  },
+  validateButton: {
+    backgroundColor: '#28a745',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  validateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 

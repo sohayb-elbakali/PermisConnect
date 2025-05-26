@@ -1,8 +1,9 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { router } from "expo-router";
 import NotificationBar from "./NotificationBar";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Define props interface for Header component
 interface HeaderProps {
@@ -17,7 +18,24 @@ const Header: React.FC<HeaderProps> = ({
   onNotificationPress,
 }) => {
   const [showNotifications, setShowNotifications] = React.useState(false);
+  const [headerTitle, setHeaderTitle] = useState(title);
   const slideAnim = useRef(new Animated.Value(-1000)).current;
+
+  useEffect(() => {
+    const loadAutoEcoleName = async () => {
+      try {
+        const selectedAutoEcole = await AsyncStorage.getItem('selectedAutoEcole');
+        if (selectedAutoEcole) {
+          const autoEcole = JSON.parse(selectedAutoEcole);
+          setHeaderTitle(autoEcole.nom);
+        }
+      } catch (error) {
+        console.error('Error loading auto-école name:', error);
+      }
+    };
+
+    loadAutoEcoleName();
+  }, []);
 
   const handleProfilePress = () => {
     // Navigate to profile screen
@@ -76,7 +94,7 @@ const Header: React.FC<HeaderProps> = ({
           <Icon name="person-circle-outline" size={24} color="#ff6b35" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>{title}</Text>
+        <Text style={styles.headerTitle}>{headerTitle}</Text>
 
         <TouchableOpacity
           style={[styles.iconButton, showNotifications && styles.activeIconButton]}
