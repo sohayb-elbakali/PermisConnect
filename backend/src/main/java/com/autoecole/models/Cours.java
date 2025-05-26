@@ -41,6 +41,9 @@ public abstract class Cours {
     @Column
     private String cloudinaryUrl;
 
+    @Column
+    private String fileType;
+
     @ManyToOne
     @JoinColumn(name = "moniteur_id")
     private Moniteur moniteur;
