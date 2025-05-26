@@ -1,46 +1,46 @@
-import React, { useState } from 'react';
+import { router } from "expo-router";
+import React, { useState } from "react";
 import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Text,
   Animated,
   SafeAreaView,
-} from 'react-native';
-import { router } from 'expo-router';
-import TextField from '../components/TextField';
-import Button from '../components/Button';
-import authService from '../services/authService';
-import { Colors } from '../constants/Colors';
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import Button from "../components/Button";
+import TextField from "../components/TextField";
+import { Colors } from "../constants/Colors";
+import { authService } from "../services/authService";
 
 const RegisterScreen = () => {
   const [loading, setLoading] = useState(false);
-  const [notification, setNotification] = useState({ message: '', type: '' });
+  const [notification, setNotification] = useState({ message: "", type: "" });
   const [notificationOpacity] = useState(new Animated.Value(0));
   const [formData, setFormData] = useState({
-    nom: '',
-    prenom: '',
-    email: '',
-    motDePasse: '',
-    telephone: '',
-    adresse: '',
-    dateNaissance: '',
-    numeroPermis: '',
-    typePermis: ''
+    nom: "",
+    prenom: "",
+    email: "",
+    password: "",
+    telephone: "",
+    adresse: "",
+    dateNaissance: "",
+    numeroPermis: "",
+    typePermis: "",
   });
   const [errors, setErrors] = useState({
-    nom: '',
-    prenom: '',
-    email: '',
-    motDePasse: '',
-    telephone: '',
-    adresse: '',
-    dateNaissance: '',
-    numeroPermis: '',
-    typePermis: ''
+    nom: "",
+    prenom: "",
+    email: "",
+    password: "",
+    telephone: "",
+    adresse: "",
+    dateNaissance: "",
+    numeroPermis: "",
+    typePermis: "",
   });
 
-  const showNotification = (message: string, type: 'success' | 'error') => {
+  const showNotification = (message: string, type: "success" | "error") => {
     setNotification({ message, type });
     Animated.sequence([
       Animated.timing(notificationOpacity, {
@@ -58,61 +58,71 @@ const RegisterScreen = () => {
   };
 
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
     // Clear error when user types
     if (errors[field as keyof typeof errors]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [field]: ''
+        [field]: "",
       }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {
-      nom: '',
-      prenom: '',
-      email: '',
-      motDePasse: '',
-      telephone: '',
-      adresse: '',
-      dateNaissance: '',
-      numeroPermis: '',
-      typePermis: ''
+      nom: "",
+      prenom: "",
+      email: "",
+      password: "",
+      telephone: "",
+      adresse: "",
+      dateNaissance: "",
+      numeroPermis: "",
+      typePermis: "",
     };
 
-    if (!formData.nom.trim()) newErrors.nom = 'Le nom est requis';
-    if (!formData.prenom.trim()) newErrors.prenom = 'Le prénom est requis';
-    if (!formData.email.trim()) newErrors.email = 'L\'email est requis';
-    if (!formData.motDePasse.trim()) newErrors.motDePasse = 'Le mot de passe est requis';
-    if (!formData.telephone.trim()) newErrors.telephone = 'Le téléphone est requis';
-    if (!formData.adresse.trim()) newErrors.adresse = 'L\'adresse est requise';
-    if (!formData.dateNaissance.trim()) newErrors.dateNaissance = 'La date de naissance est requise';
-    if (!formData.numeroPermis.trim()) newErrors.numeroPermis = 'Le numéro de permis est requis';
-    if (!formData.typePermis.trim()) newErrors.typePermis = 'Le type de permis est requis';
+    if (!formData.nom.trim()) newErrors.nom = "Le nom est requis";
+    if (!formData.prenom.trim()) newErrors.prenom = "Le prénom est requis";
+    if (!formData.email.trim()) newErrors.email = "L'email est requis";
+    if (!formData.password.trim())
+      newErrors.password = "Le mot de passe est requis";
+    if (formData.password.length < 6)
+      newErrors.password =
+        "Le mot de passe doit contenir au moins 6 caractères";
+    if (!formData.telephone.trim())
+      newErrors.telephone = "Le téléphone est requis";
+    if (!formData.adresse.trim()) newErrors.adresse = "L'adresse est requise";
+    if (!formData.dateNaissance.trim())
+      newErrors.dateNaissance = "La date de naissance est requise";
+    if (!formData.numeroPermis.trim())
+      newErrors.numeroPermis = "Le numéro de permis est requis";
+    if (!formData.typePermis.trim())
+      newErrors.typePermis = "Le type de permis est requis";
 
     // Validate email format
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Format d\'email invalide';
+      newErrors.email = "Format d'email invalide";
     }
 
     // Validate date format (YYYY-MM-DD)
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (formData.dateNaissance && !dateRegex.test(formData.dateNaissance)) {
-      newErrors.dateNaissance = 'Format de date invalide (YYYY-MM-DD)';
+      newErrors.dateNaissance = "Format de date invalide (YYYY-MM-DD)";
     }
 
-    // Validate phone number (more flexible validation)
-    const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4}$/;
-    if (formData.telephone && !phoneRegex.test(formData.telephone.replace(/\s/g, ''))) {
-      newErrors.telephone = 'Format de téléphone invalide (ex: 0123456789 ou 01 23 45 67 89)';
+    // Validate phone number format (at least 10 digits)
+    const phoneRegex = /^[\+]?[0-9]{10,15}$/;
+    const cleanPhone = formData.telephone.replace(/[\s\-\(\)]/g, "");
+    if (formData.telephone && !phoneRegex.test(cleanPhone)) {
+      newErrors.telephone =
+        "Le téléphone doit contenir 10-15 chiffres (ex: 0123456789)";
     }
 
     setErrors(newErrors);
-    return !Object.values(newErrors).some(error => error !== '');
+    return !Object.values(newErrors).some((error) => error !== "");
   };
 
   const handleSubmit = async () => {
@@ -122,27 +132,39 @@ const RegisterScreen = () => {
 
     try {
       setLoading(true);
-      // Format phone number before sending
+      // Format phone number and prepare data according to API requirements
       const formattedData = {
-        ...formData,
-        telephone: formData.telephone.replace(/\s/g, '') // Remove spaces from phone number
+        nom: formData.nom.trim(),
+        prenom: formData.prenom.trim(),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        telephone: formData.telephone.replace(/[\s\-\(\)]/g, ""), // Remove formatting characters
+        adresse: formData.adresse.trim(),
+        dateNaissance: formData.dateNaissance,
+        numeroPermis: formData.numeroPermis.trim(),
+        typePermis: formData.typePermis.trim().toUpperCase(),
       };
+
+      console.log("Submitting registration with data:", formattedData);
       const response = await authService.register(formattedData);
-      
+
       if (response.success) {
-        showNotification('Inscription réussie', 'success');
+        showNotification(
+          "Inscription réussie ! Redirection vers la connexion...",
+          "success"
+        );
         setTimeout(() => {
-          router.replace('/login');
+          router.replace("/login");
         }, 2000);
       } else {
-        showNotification(response.message || 'Échec de l\'inscription', 'error');
+        showNotification(response.message || "Échec de l'inscription", "error");
       }
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error("Registration error:", error);
       showNotification(
-        error.response?.data?.message || 
-        'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.',
-        'error'
+        error.message ||
+          "Une erreur est survenue lors de l'inscription. Veuillez réessayer.",
+        "error"
       );
     } finally {
       setLoading(false);
@@ -158,21 +180,21 @@ const RegisterScreen = () => {
           <TextField
             label="Nom"
             value={formData.nom}
-            onChangeText={(text) => handleChange('nom', text)}
+            onChangeText={(text) => handleChange("nom", text)}
             error={errors.nom}
           />
 
           <TextField
             label="Prénom"
             value={formData.prenom}
-            onChangeText={(text) => handleChange('prenom', text)}
+            onChangeText={(text) => handleChange("prenom", text)}
             error={errors.prenom}
           />
 
           <TextField
             label="Email"
             value={formData.email}
-            onChangeText={(text) => handleChange('email', text)}
+            onChangeText={(text) => handleChange("email", text)}
             error={errors.email}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -180,48 +202,52 @@ const RegisterScreen = () => {
 
           <TextField
             label="Mot de passe"
-            value={formData.motDePasse}
-            onChangeText={(text) => handleChange('motDePasse', text)}
-            error={errors.motDePasse}
+            value={formData.password}
+            onChangeText={(text) => handleChange("password", text)}
+            error={errors.password}
             secureTextEntry
+            placeholder="Au moins 6 caractères"
           />
 
           <TextField
             label="Téléphone"
             value={formData.telephone}
-            onChangeText={(text) => handleChange('telephone', text)}
+            onChangeText={(text) => handleChange("telephone", text)}
             error={errors.telephone}
             keyboardType="phone-pad"
-            placeholder="0123456789"
+            placeholder="Ex: 0123456789 ou +33123456789"
           />
 
           <TextField
             label="Adresse"
             value={formData.adresse}
-            onChangeText={(text) => handleChange('adresse', text)}
+            onChangeText={(text) => handleChange("adresse", text)}
             error={errors.adresse}
+            placeholder="Votre adresse complète"
           />
 
           <TextField
             label="Date de naissance"
             value={formData.dateNaissance}
-            onChangeText={(text) => handleChange('dateNaissance', text)}
+            onChangeText={(text) => handleChange("dateNaissance", text)}
             error={errors.dateNaissance}
-            placeholder="YYYY-MM-DD"
+            placeholder="YYYY-MM-DD (ex: 1990-01-15)"
           />
 
           <TextField
             label="Numéro de permis"
             value={formData.numeroPermis}
-            onChangeText={(text) => handleChange('numeroPermis', text)}
+            onChangeText={(text) => handleChange("numeroPermis", text)}
             error={errors.numeroPermis}
+            placeholder="Votre numéro de permis"
           />
 
           <TextField
             label="Type de permis"
             value={formData.typePermis}
-            onChangeText={(text) => handleChange('typePermis', text)}
+            onChangeText={(text) => handleChange("typePermis", text)}
             error={errors.typePermis}
+            placeholder="A, B, C, D..."
           />
 
           <Button
@@ -233,7 +259,7 @@ const RegisterScreen = () => {
 
           <Button
             title="Déjà un compte ? Se connecter"
-            onPress={() => router.replace('/login')}
+            onPress={() => router.replace("/login")}
             type="secondary"
             style={styles.loginButton}
           />
@@ -244,7 +270,8 @@ const RegisterScreen = () => {
             styles.notification,
             {
               opacity: notificationOpacity,
-              backgroundColor: notification.type === 'success' ? '#4CAF50' : '#f44336',
+              backgroundColor:
+                notification.type === "success" ? "#4CAF50" : "#f44336",
             },
           ]}
         >
@@ -258,7 +285,7 @@ const RegisterScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   scrollContent: {
     flexGrow: 1,
@@ -266,16 +293,16 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.light.tint,
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   submitButton: {
     marginTop: 20,
@@ -284,21 +311,21 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   notification: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     left: 20,
     right: 20,
     padding: 15,
     borderRadius: 8,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   notificationText: {
-    color: '#fff',
-    textAlign: 'center',
+    color: "#fff",
+    textAlign: "center",
     fontSize: 16,
   },
 });

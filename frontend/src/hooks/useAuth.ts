@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import authService, { User, LoginCredentials } from "../services/authService";
+import { useEffect, useState } from "react";
+import { authService, LoginCredentials, User } from "../services/authService";
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -35,12 +35,13 @@ export const useAuth = () => {
       setIsLoading(true);
       const response = await authService.login(credentials);
 
-      if (response.success) {
+      if (response) {
         setUser(response.user || null);
         setIsAuthenticated(true);
+        return { success: true, data: response };
       }
 
-      return response;
+      return { success: false, message: "Login failed" };
     } catch (error: any) {
       return { success: false, message: error.message || "Login failed" };
     } finally {
