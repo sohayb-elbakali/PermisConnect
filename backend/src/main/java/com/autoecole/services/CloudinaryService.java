@@ -4,13 +4,16 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.HashMap;
 
 @Service
 public class CloudinaryService {
-
+    private static final Logger logger = LoggerFactory.getLogger(CloudinaryService.class);
     private final Cloudinary cloudinary;
 
     public CloudinaryService(Cloudinary cloudinary) {
@@ -18,6 +21,36 @@ public class CloudinaryService {
     }
 
     public Map uploadFile(MultipartFile file) throws IOException {
-        return cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
+        try {
+            String originalFilename = file.getOriginalFilename();
+            logger.info("Starting file upload for: {}", originalFilename);
+            
+            if (originalFilename != null && !isAllowedFileType(originalFilename)) {
+                throw new IOException("Invalid file type. Only images and PDFs are allowed.");
+            }
+
+            Map<String, Object> options = new HashMap<>();
+            if (originalFilename != null && originalFilename.toLowerCase().endsWith(".pdf")) {
+                options.put("resource_type", "raw");
+            }
+            
+            Map result = cloudinary.uploader().upload(file.getBytes(), options);
+            logger.info("File uploaded successfully to Cloudinary: {}", result);
+            return result;
+            
+        } catch (Exception e) {
+            logger.error("Error uploading file to Cloudinary: {}", e.getMessage(), e);
+            throw new IOException("Failed to upload file to Cloudinary: " + e.getMessage(), e);
+        }
+    }
+    
+    private boolean isAllowedFileType(String filename) {
+        String lowerFilename = filename.toLowerCase();
+        // Allow only images and PDFs
+        return lowerFilename.endsWith(".jpg") || 
+               lowerFilename.endsWith(".jpeg") || 
+               lowerFilename.endsWith(".png") || 
+               lowerFilename.endsWith(".gif") || 
+               lowerFilename.endsWith(".pdf");
     }
 } 
