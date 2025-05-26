@@ -30,9 +30,16 @@ public class CloudinaryService {
             }
 
             Map<String, Object> options = new HashMap<>();
-            if (originalFilename != null && originalFilename.toLowerCase().endsWith(".pdf")) {
-                options.put("resource_type", "raw");
-            }
+            // Do NOT set resource_type for PDFs; let Cloudinary treat it as an image
+            // This will generate an image (PNG/JPG) of the first page of the PDF
+            // if (originalFilename != null && originalFilename.toLowerCase().endsWith(".pdf")) {
+            //     options.put("resource_type", "raw");
+            //     String baseName = originalFilename;
+            //     if (!baseName.toLowerCase().endsWith(".pdf")) {
+            //         baseName = baseName + ".pdf";
+            //     }
+            //     options.put("public_id", baseName);
+            // }
             
             Map result = cloudinary.uploader().upload(file.getBytes(), options);
             logger.info("File uploaded successfully to Cloudinary: {}", result);

@@ -40,6 +40,24 @@ function isGoogleDriveViewLink(url: string): boolean {
   return /drive\.google\.com\/file\/d\/.+\/(view|preview)/.test(url);
 }
 
+// Helper to check if a Cloudinary URL is a PDF image (first page as image)
+function isCloudinaryPdfImage(url: string, fileType: string): boolean {
+  // If fileType is 'raw' but the URL ends with .png or .jpg, treat as image
+  return (
+    fileType === 'raw' &&
+    (url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.jpeg'))
+  );
+}
+
+// Helper to get the first page of a Cloudinary PDF as an image
+function getCloudinaryPdfImage(url: string): string {
+  if (url.includes('/image/upload/') && url.endsWith('.pdf')) {
+    // Insert transformation for first page (pg_1) and convert to jpg
+    return url.replace('/upload/', '/upload/pg_1/').replace('.pdf', '.pdf.jpg');
+  }
+  return url;
+}
+
 export default function CourseViewerScreen({ cloudinaryUrl, fileType }: CourseViewerScreenProps) {
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -59,6 +77,29 @@ export default function CourseViewerScreen({ cloudinaryUrl, fileType }: CourseVi
   const renderContent = () => {
     if (!cloudinaryUrl) {
       return <Text>No course material available.</Text>;
+    }
+
+    // If PDF was uploaded as image, treat as image using Cloudinary transformation
+    if (fileType === 'raw' && cloudinaryUrl.endsWith('.pdf')) {
+      const imageUrl = getCloudinaryPdfImage(cloudinaryUrl);
+      return (
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.mediaContent}
+          resizeMode="contain"
+        />
+      );
+    }
+
+    // If PDF was uploaded as image, treat as image
+    if (isCloudinaryPdfImage(cloudinaryUrl, fileType)) {
+      return (
+        <Image
+          source={{ uri: cloudinaryUrl }}
+          style={styles.mediaContent}
+          resizeMode="contain"
+        />
+      );
     }
 
     switch (fileType) {
