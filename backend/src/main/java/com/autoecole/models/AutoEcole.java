@@ -1,9 +1,11 @@
 package com.autoecole.models;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -41,12 +43,15 @@ public class AutoEcole {
 
     private String horaires;
 
-    @OneToMany(mappedBy = "autoEcole")
-    private List<Client> clients;
+    @OneToMany(mappedBy = "autoEcole", cascade = CascadeType.ALL)
+    @JsonBackReference
+    private List<Client> clients = new ArrayList<>();
 
-    @OneToMany(mappedBy = "autoEcole")
-    private List<CoursPrive> coursPrives;
+    @OneToMany(mappedBy = "autoEcole", cascade = CascadeType.ALL)
+    @JsonBackReference
+    private List<CoursPrive> coursPrives = new ArrayList<>();
 
-    @OneToMany(mappedBy = "autoEcole")
-    private List<Moniteur> moniteurs;
+    @OneToMany(mappedBy = "autoEcole", cascade = CascadeType.ALL)
+    @JsonBackReference
+    private List<Moniteur> moniteurs = new ArrayList<>();
 } 
