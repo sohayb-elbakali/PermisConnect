@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,17 @@ import {
   StatusBar,
   Image,
   Dimensions,
-  Linking // Import Linking for web to open PDF in new tab
+  Linking
 } from 'react-native';
 import Header from '../components/Header';
-import Video from 'react-native-video'; // Import Video (assuming react-native-video has web support or a web-compatible peer dependency)
+// import Video from 'react-native-video'; // react-native-video is not ideal for web, will use react-player
+
+// Import web-compatible libraries
+import { Document, Page, pdfjs } from 'react-pdf';
+import ReactPlayer from 'react-player';
+
+// Configure react-pdf worker source
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,7 +27,20 @@ interface CourseViewerScreenProps {
 }
 
 export default function CourseViewerScreen({ cloudinaryUrl, fileType }: CourseViewerScreenProps) {
-  console.log('CourseViewerScreen (Web) received:', { cloudinaryUrl, fileType }); // Add log
+  const [numPages, setNumPages] = useState(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pdfError, setPdfError] = useState<string | null>(null); // State for PDF errors
+
+  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+    setNumPages(numPages);
+    setPageNumber(1); // Start with the first page
+    setPdfError(null); // Clear any previous errors
+  }
+
+  function onDocumentLoadError(error: any) {
+    console.error('react-pdf error:', error);
+    setPdfError('Failed to load PDF document.');
+  }
 
   const renderContent = () => {
     if (!cloudinaryUrl) {
@@ -37,21 +57,42 @@ export default function CourseViewerScreen({ cloudinaryUrl, fileType }: CourseVi
           />
         );
       case 'video':
-        // Note: react-native-video's web support might require specific setup or a different library
+        // Use react-player for web video support
         return (
-          <Video
-            source={{ uri: cloudinaryUrl }}
-            style={styles.mediaContent}
-            controls={true}
-            resizeMode="contain"
-          />
+          <View style={styles.videoContainer}> {/* Container for aspect ratio */}
+            <ReactPlayer
+              url={cloudinaryUrl}
+              controls={true}
+              width='100%'
+              height='100%'
+              config={{
+                file: { attributes: { controlsList: 'nodownload' } },
+              }}
+              // Add onError if needed
+            />
+          </View>
         );
       case 'raw': // Handle raw files (like PDFs) on web
-        // On web, we can provide a link to open the PDF in a new tab
+        if (pdfError) {
+          return <Text style={styles.errorText}>{pdfError}</Text>;
+        }
         return (
-          <View>
-            <Text style={styles.unsupportedText}>Preview not available for this file type on the web.</Text>
-            <Text style={styles.downloadLink} onPress={() => Linking.openURL(cloudinaryUrl)}>Click here to view the document</Text>
+          <View style={styles.pdfContainer}> {/* Container for PDF viewer */}
+            <Document
+              file={cloudinaryUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              // Remove options that are not supported or needed for basic display
+            >
+              {/* Render a single page */}
+              <Page pageNumber={pageNumber} renderTextLayer={false} renderAnnotationLayer={false} />
+            </Document>
+            {numPages && (
+              <View style={styles.pagination}>
+                <Text>Page {pageNumber} of {numPages}</Text>
+                {/* Add pagination controls if desired */}
+              </View>
+            )}
           </View>
         );
       default:
@@ -86,15 +127,22 @@ const styles = StyleSheet.create({
   mediaContent: {
     width: width - 20,
     height: height * 0.7,
+    // Remove PDF specific styles from here
   },
-  unsupportedText: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 10,
+  videoContainer: {
+    width: '100%',
+    aspectRatio: 16 / 9, // Common video aspect ratio
   },
-  downloadLink: {
+  pdfContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  pagination: {
+    marginTop: 10,
+  },
+  errorText: {
+    color: 'red',
     fontSize: 16,
-    color: '#007BFF', // Link color
-    textDecorationLine: 'underline',
   },
 }); 
