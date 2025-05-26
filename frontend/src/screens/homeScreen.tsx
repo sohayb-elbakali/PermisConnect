@@ -9,15 +9,17 @@ import {
   Image,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { router, useRouter } from "expo-router";
 import Header from "../components/Header";
 import ProgressCircle from "../components/ProgressCircle";
 import Footer from "../components/Footer";
-import { useAuth } from "../hooks/useAuth";
+import userService from "../services/userService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Button from '../components/Button';
+import axios from "axios";
+import { API_URL } from "../config";
 
 interface UserInfo {
   id: number;
@@ -34,58 +36,59 @@ export default function HomeScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("home");
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [autoEcoleName, setAutoEcoleName] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadUserInfo = async () => {
-      try {
-        const userInfoStr = await AsyncStorage.getItem("userInfo");
-        if (userInfoStr) {
-          const userData = JSON.parse(userInfoStr);
-          setUserInfo(userData);
-        }
-      } catch (error) {
-        console.error("Error loading user info:", error);
-      }
-    };
-
     loadUserInfo();
   }, []);
 
+  const loadUserInfo = async () => {
+    try {
+      const userInfoStr = await AsyncStorage.getItem("userInfo");
+      if (userInfoStr) {
+        const userData = JSON.parse(userInfoStr);
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          throw new Error("No authentication token found");
+        }
+
+        const response = await axios.get(`${API_URL}/clients/${userData.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.data) {
+          setUserInfo(response.data);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading user info:", error);
+      Alert.alert("Error", "Failed to load user information. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleProfilePress = () => {
-    console.log("Profile pressed");
-    // router.push('/profile');
+    router.push('/profile');
   };
 
   const handleNotificationPress = () => {
     console.log("Notification pressed");
-    // router.push('/notifications');
-  };
-
-  const handleCoursesPress = () => {
-    console.log("Courses button pressed");
-    // router.push('/courses');
-  };
-
-  const handleTestPress = () => {
-    console.log("Blanc test pressed");
-    // router.push('/blanc-test');
   };
 
   const handleTheoryPress = () => {
-    console.log("Theory section pressed");
-    // router.push('/theory');
+    router.push('/theory');
   };
 
   const handlePilotagePress = () => {
-    console.log("Pilotage section pressed");
-    // router.push('/pilotage');
+    router.push('/pilotage');
   };
 
   const handleBottomNavPress = (tab: string) => {
     setActiveTab(tab);
-    console.log(`Navigating to: ${tab}`); // Debug log
-
     switch (tab) {
       case "home":
         router.push("/home");
@@ -105,114 +108,85 @@ export default function HomeScreen() {
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('userInfo');
+      await AsyncStorage.removeItem('selectedAutoEcole');
       router.replace('/login');
     } catch (error) {
       console.error('Error during logout:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors de la déconnexion');
+      Alert.alert('Error', 'An error occurred during logout');
     }
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ff6b35" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
 
-      {/* Custom Header */}
       <Header
         title={userInfo?.autoEcole?.nom || "PermisConnect"}
         onProfilePress={handleProfilePress}
         onNotificationPress={handleNotificationPress}
       />
 
-      {/* User Section */}
-      <View style={styles.userSection}>
-        <View style={styles.userInfo}>
-          <Image
-            source={{ uri: "https://via.placeholder.com/50" }}
-            style={styles.avatar}
-          />
-          <View style={styles.welcomeContainer}>
-            <Text style={styles.welcomeText}>Welcome</Text>
-            <Text style={styles.userRole}>{userInfo?.autoEcole?.nom || "PermisConnect"}</Text>
-          </View>
+      <ScrollView style={styles.scrollView}>
+        {/* Greeting Section */}
+        <View style={styles.greetingSection}>
+          <Text style={styles.helloText}>Hello, {userInfo?.prenom}</Text>
+          <Text style={styles.userName}>{userInfo?.nom}</Text>
         </View>
-      </View>
 
-      {/* Greeting */}
-      <View style={styles.greetingSection}>
-        <Text style={styles.helloText}>Hello</Text>
-        <Text style={styles.userName}>{userInfo?.prenom} {userInfo?.nom}</Text>
-      </View>
+        {/* Progress Circles */}
+        <View style={styles.progressContainer}>
+          <TouchableOpacity activeOpacity={0.8} onPress={handleTheoryPress}>
+            <ProgressCircle
+              size={120}
+              strokeWidth={10}
+              progress={65}
+              color="#ff6b35"
+              icon="school-outline"
+              label="THEORETICAL TEST"
+            />
+          </TouchableOpacity>
 
-      {/* Progress Circles */}
-      <View style={styles.progressContainer}>
-        {/* Theoretical Test Circle */}
-        <TouchableOpacity activeOpacity={0.8} onPress={handleTheoryPress}>
-          <ProgressCircle
-            size={120}
-            strokeWidth={10}
-            progress={65}
-            color="#ff6b35"
-            icon="school-outline"
-            label="THEORETICAL TEST"
-          />
-        </TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.8} onPress={handlePilotagePress}>
+            <ProgressCircle
+              size={120}
+              strokeWidth={10}
+              progress={80}
+              color="#ff6b35"
+              icon="car-outline"
+              label="DRIVING TEST"
+            />
+          </TouchableOpacity>
+        </View>
 
-        {/* Pilotage Circle */}
-        <TouchableOpacity activeOpacity={0.8} onPress={handlePilotagePress}>
-          <ProgressCircle
-            size={120}
-            strokeWidth={10}
-            progress={80}
-            color="#4CAF50"
-            icon="car-outline"
-            label="PILOTAGE"
-          />
-        </TouchableOpacity>
-      </View>
+        {/* Action Buttons */}
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => router.push('/profile')}
+          >
+            <Icon name="person-outline" size={24} color="#fff" />
+            <Text style={styles.actionButtonText}>My Profile</Text>
+          </TouchableOpacity>
 
-      {/* Main Buttons */}
-      <View style={styles.buttonsContainer}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={handleCoursesPress}
-          activeOpacity={0.8}
-        >
-          <Icon name="book-outline" size={24} color="#fff" />
-          <Text style={styles.actionButtonText}>COURSES</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.logoutButton]}
+            onPress={handleLogout}
+          >
+            <Icon name="log-out-outline" size={24} color="#fff" />
+            <Text style={styles.actionButtonText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
 
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={handleTestPress}
-          activeOpacity={0.8}
-        >
-          <Icon name="document-text-outline" size={24} color="#fff" />
-          <Text style={styles.actionButtonText}>BLANC TEST</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Bottom Navigation */}
       <Footer activeTab={activeTab} onTabPress={handleBottomNavPress} />
-
-      <View style={styles.content}>
-        <Button
-          title="Mes cours"
-          onPress={() => router.push('/cours')}
-        />
-        <Button
-          title="Tests blancs"
-          onPress={() => router.push('/tests')}
-        />
-        <Button
-          title="Mon profil"
-          onPress={() => router.push('/profile')}
-        />
-        <Button
-          title="Se déconnecter"
-          onPress={handleLogout}
-          type="secondary"
-        />
-      </View>
     </SafeAreaView>
   );
 }
@@ -222,81 +196,51 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
-  userSection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: 20,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  userInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#ddd",
-  },
-  welcomeContainer: {
-    marginLeft: 12,
-  },
-  welcomeText: {
-    fontSize: 14,
-    color: "#666",
-  },
-  userRole: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#000",
+  scrollView: {
+    flex: 1,
   },
   greetingSection: {
-    paddingHorizontal: 20,
-    marginBottom: 30,
+    padding: 20,
   },
   helloText: {
     fontSize: 24,
-    color: "#666",
+    color: "#2c3e50",
     marginBottom: 5,
   },
   userName: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#000",
+    color: "#2c3e50",
   },
   progressContainer: {
     flexDirection: "row",
-    justifyContent: "space-evenly",
+    justifyContent: "space-around",
+    paddingHorizontal: 20,
     marginBottom: 30,
   },
-  buttonsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    marginBottom: 80,
+  actionButtonsContainer: {
+    padding: 20,
   },
   actionButton: {
+    backgroundColor: "#ff6b35",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ff6b35",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 25,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
   },
   actionButtonText: {
     color: "#fff",
+    fontSize: 16,
     fontWeight: "bold",
-    marginLeft: 8,
+    marginLeft: 10,
   },
-  content: {
-    padding: 20,
+  logoutButton: {
+    backgroundColor: "#e74c3c",
   },
 });
