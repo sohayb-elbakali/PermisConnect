@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config';
 import Header from '../components/Header';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Course {
   id: number;
@@ -39,10 +40,11 @@ interface UserInfo {
 }
 
 export default function CoursesScreen() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     const loadUserInfoAndCourses = async () => {
@@ -102,11 +104,15 @@ export default function CoursesScreen() {
   }, []);
 
   const handleCoursePress = (course: Course) => {
-    if (course.cloudinaryUrl) {
-      router.push({ pathname: '/course-viewer', params: { cloudinaryUrl: course.cloudinaryUrl, fileType: course.fileType } });
-    } else {
-      Alert.alert('Error', 'Course material URL not available.');
-    }
+    router.push({
+      pathname: '/course-viewer',
+      params: {
+        cloudinaryUrl: course.cloudinaryUrl,
+        fileType: course.fileType,
+        courseId: course.id.toString(),
+        courseType: course.courseType
+      }
+    });
   };
 
   if (loading) {
