@@ -26,6 +26,20 @@ interface CourseViewerScreenProps {
   fileType: string;
 }
 
+// Helper to convert Google Drive view links to direct download links
+function getDirectDriveLink(url: string): string {
+  const match = url.match(/\/file\/d\/([^/]+)\//);
+  if (match && match[1]) {
+    return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+  }
+  return url;
+}
+
+// Helper to check if a link is a Google Drive preview/view link
+function isGoogleDriveViewLink(url: string): boolean {
+  return /drive\.google\.com\/file\/d\/.+\/(view|preview)/.test(url);
+}
+
 export default function CourseViewerScreen({ cloudinaryUrl, fileType }: CourseViewerScreenProps) {
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -57,7 +71,22 @@ export default function CourseViewerScreen({ cloudinaryUrl, fileType }: CourseVi
           />
         );
       case 'video':
-        // Use react-player for web video support
+        // If it's a Google Drive view/preview link, use an iframe
+        if (isGoogleDriveViewLink(cloudinaryUrl)) {
+          // Ensure it ends with /preview for best embedding
+          let embedUrl = cloudinaryUrl.replace(/\/view(\?.*)?$/, '/preview');
+          return (
+            <iframe
+              src={embedUrl}
+              width="100%"
+              height="480"
+              allow="autoplay"
+              style={{ border: 'none' }}
+              title="Google Drive Video"
+            ></iframe>
+          );
+        }
+        // Otherwise, use ReactPlayer
         return (
           <View style={styles.videoContainer}> {/* Container for aspect ratio */}
             <ReactPlayer
@@ -68,7 +97,6 @@ export default function CourseViewerScreen({ cloudinaryUrl, fileType }: CourseVi
               config={{
                 file: { attributes: { controlsList: 'nodownload' } },
               }}
-              // Add onError if needed
             />
           </View>
         );
@@ -82,15 +110,12 @@ export default function CourseViewerScreen({ cloudinaryUrl, fileType }: CourseVi
               file={cloudinaryUrl}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
-              // Remove options that are not supported or needed for basic display
             >
-              {/* Render a single page */}
               <Page pageNumber={pageNumber} renderTextLayer={false} renderAnnotationLayer={false} />
             </Document>
             {numPages && (
               <View style={styles.pagination}>
                 <Text>Page {pageNumber} of {numPages}</Text>
-                {/* Add pagination controls if desired */}
               </View>
             )}
           </View>

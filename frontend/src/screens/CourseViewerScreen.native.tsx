@@ -22,6 +22,15 @@ interface CourseViewerScreenProps {
   fileType: string;
 }
 
+// Helper to convert Google Drive view links to direct download links
+function getDirectDriveLink(url: string): string {
+  const match = url.match(/\/file\/d\/([^/]+)\//);
+  if (match && match[1]) {
+    return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+  }
+  return url;
+}
+
 export default function CourseViewerScreen({ cloudinaryUrl, fileType }: CourseViewerScreenProps) {
   console.log('CourseViewerScreen (Native) received:', { cloudinaryUrl, fileType });
 
@@ -42,7 +51,7 @@ export default function CourseViewerScreen({ cloudinaryUrl, fileType }: CourseVi
       case 'video':
         return (
           <Video
-            source={{ uri: cloudinaryUrl }}
+            source={{ uri: getDirectDriveLink(cloudinaryUrl) }}
             style={styles.mediaContent}
             controls={true}
             resizeMode="contain"
@@ -50,7 +59,7 @@ export default function CourseViewerScreen({ cloudinaryUrl, fileType }: CourseVi
         );
       case 'raw': // Handle raw files (like PDFs) on native
           // react-native-pdf requires a source object with uri
-          const source = { uri: cloudinaryUrl, cache: true };
+          const source = { uri: getDirectDriveLink(cloudinaryUrl), cache: true };
           return (
             <Pdf
               source={source}
