@@ -20,7 +20,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(new AntPathRequestMatcher("/**")).permitAll()
             )
-            .headers(headers -> headers.frameOptions().disable());
+            .headers(headers -> headers.disable());
         
         return http.build();
     }
