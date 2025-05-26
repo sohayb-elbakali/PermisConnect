@@ -1,5 +1,6 @@
 package com.autoecole.controllers;
 
+import com.autoecole.dto.CreateTimeSlotRequest;
 import com.autoecole.models.TimeSlot;
 import com.autoecole.services.TimeSlotService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,9 +36,13 @@ public class TimeSlotController {
         @ApiResponse(responseCode = "400", description = "Invalid time slot data provided"),
         @ApiResponse(responseCode = "404", description = "Moniteur not found")
     })
-    @PostMapping
-    public ResponseEntity<TimeSlot> createTimeSlot(@Valid @RequestBody TimeSlot timeSlot) {
-        return ResponseEntity.ok(timeSlotService.createTimeSlot(timeSlot));
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TimeSlot> createTimeSlot(@Valid @RequestBody CreateTimeSlotRequest request) {
+        TimeSlot timeSlot = new TimeSlot();
+        timeSlot.setStartTime(request.getStartTime());
+        timeSlot.setEndTime(request.getEndTime());
+        timeSlot.setStatus(request.getStatus());
+        return ResponseEntity.ok(timeSlotService.createTimeSlot(timeSlot, request.getMoniteurId()));
     }
 
     @Operation(summary = "Get all time slots for a moniteur",

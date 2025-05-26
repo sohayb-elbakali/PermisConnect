@@ -18,10 +18,19 @@ public class TimeSlotService {
     private final MoniteurRepository moniteurRepository;
 
     @Transactional
-    public TimeSlot createTimeSlot(TimeSlot timeSlot) {
+    public TimeSlot createTimeSlot(TimeSlot timeSlot, Long moniteurId) {
         // Verify that the moniteur exists
-        moniteurRepository.findById(timeSlot.getMoniteur().getId())
+        var moniteur = moniteurRepository.findById(moniteurId)
                 .orElseThrow(() -> new EntityNotFoundException("Moniteur not found"));
+        
+        // Validate time slot
+        validateTimeSlot(timeSlot);
+        
+        // Check for overlapping time slots
+        validateNoOverlappingTimeSlots(timeSlot, moniteurId);
+        
+        timeSlot.setMoniteur(moniteur);
+        timeSlot.setId(null); // Ensure new ID is generated
 
         // Set default status if not provided
         if (timeSlot.getStatus() == null) {
@@ -29,6 +38,39 @@ public class TimeSlotService {
         }
 
         return timeSlotRepository.save(timeSlot);
+    }
+
+    private void validateTimeSlot(TimeSlot timeSlot) {
+        if (timeSlot.getStartTime() == null || timeSlot.getEndTime() == null) {
+            throw new IllegalArgumentException("Start time and end time are required");
+        }
+
+        if (timeSlot.getStartTime().isAfter(timeSlot.getEndTime())) {
+            throw new IllegalArgumentException("Start time must be before end time");
+        }
+
+        if (timeSlot.getStartTime().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Cannot create time slots in the past");
+        }
+    }
+
+    private void validateNoOverlappingTimeSlots(TimeSlot newTimeSlot, Long moniteurId) {
+        List<TimeSlot> existingTimeSlots = timeSlotRepository.findByMoniteurIdAndStartTimeBetween(
+            moniteurId,
+            newTimeSlot.getStartTime().minusMinutes(1),
+            newTimeSlot.getEndTime().plusMinutes(1)
+        );
+
+        for (TimeSlot existingSlot : existingTimeSlots) {
+            if (isOverlapping(newTimeSlot, existingSlot)) {
+                throw new IllegalStateException("Time slot overlaps with existing time slot");
+            }
+        }
+    }
+
+    private boolean isOverlapping(TimeSlot newSlot, TimeSlot existingSlot) {
+        return !newSlot.getEndTime().isBefore(existingSlot.getStartTime()) &&
+               !newSlot.getStartTime().isAfter(existingSlot.getEndTime());
     }
 
     public List<TimeSlot> getMoniteurTimeSlots(Long moniteurId) {
