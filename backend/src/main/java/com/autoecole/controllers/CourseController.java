@@ -32,4 +32,44 @@ public class CourseController {
         List<CoursPrive> privateCourses = courseService.getPrivateCoursesByAutoEcole(autoEcoleId);
         return ResponseEntity.ok(privateCourses);
     }
+
+    @GetMapping
+    public ResponseEntity<List<Cours>> getAllCourses() {
+        List<Cours> allCourses = courseService.getAllCourses();
+        return ResponseEntity.ok(allCourses);
+    }
+
+    @PostMapping("/view")
+    public ResponseEntity<?> recordCourseView(@RequestBody CourseViewRequest request) {
+        courseService.recordCourseView(request.getClientId(), request.getCourseId());
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/progress/theoretical/{clientId}")
+    public ResponseEntity<CourseService.TheoreticalCourseProgress> getTheoreticalCourseProgress(@PathVariable Long clientId) {
+        CourseService.TheoreticalCourseProgress progress = courseService.getTheoreticalCourseProgress(clientId);
+        return ResponseEntity.ok(progress);
+    }
+
+    // Helper class for the request body of the course view endpoint
+    static class CourseViewRequest {
+        private Long clientId;
+        private Long courseId;
+
+        public Long getClientId() {
+            return clientId;
+        }
+
+        public void setClientId(Long clientId) {
+            this.clientId = clientId;
+        }
+
+        public Long getCourseId() {
+            return courseId;
+        }
+
+        public void setCourseId(Long courseId) {
+            this.courseId = courseId;
+        }
+    }
 } 
