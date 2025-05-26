@@ -1,5 +1,6 @@
 package com.autoecole.models;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -18,8 +19,12 @@ public class Moniteur extends User {
 
     @ManyToOne
     @JoinColumn(name = "auto_ecole_id")
+    @JsonManagedReference
     private AutoEcole autoEcole;
 
     @OneToMany(mappedBy = "moniteur")
     private List<Cours> cours;
+
+    @OneToMany(mappedBy = "moniteur")
+    private List<TimeSlot> timeSlots;
 } 

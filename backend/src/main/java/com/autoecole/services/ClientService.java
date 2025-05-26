@@ -6,10 +6,10 @@ import com.autoecole.models.User;
 import com.autoecole.repositories.ClientRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ClientService {
     private final ClientRepository clientRepository;
-    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public Client createClient(ClientRequest request) {
@@ -32,7 +31,7 @@ public class ClientService {
             request.getNom(),
             request.getPrenom(),
             request.getEmail(),
-            passwordEncoder.encode(request.getPassword()),
+            Base64.getEncoder().encodeToString(request.getPassword().getBytes()),
             request.getTelephone(),
             request.getAdresse()
         );
@@ -107,7 +106,7 @@ public class ClientService {
         user.setEmail(request.getEmail());
         user.setTelephone(request.getTelephone());
         if (request.getPassword() != null && !request.getPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setPassword(Base64.getEncoder().encodeToString(request.getPassword().getBytes()));
         }
         user.setAdresse(request.getAdresse());
         

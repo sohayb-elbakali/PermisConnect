@@ -1,18 +1,24 @@
 package com.autoecole.services;
 
+import com.autoecole.dto.CreateMoniteurRequest;
+import com.autoecole.models.AutoEcole;
 import com.autoecole.models.Moniteur;
+import com.autoecole.repositories.AutoEcoleRepository;
 import com.autoecole.repositories.MoniteurRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Base64;
 
 @Service
 @RequiredArgsConstructor
 public class MoniteurService {
     private final MoniteurRepository moniteurRepository;
+    private final AutoEcoleRepository autoEcoleRepository;
 
     public List<Moniteur> getAllMoniteurs() {
         return moniteurRepository.findAll();
@@ -39,43 +45,87 @@ public class MoniteurService {
     }
 
     @Transactional
-    public Moniteur createMoniteur(Moniteur moniteur) {
-        if (moniteurRepository.existsByEmail(moniteur.getEmail())) {
-            throw new RuntimeException("Email already exists");
+    public Moniteur createMoniteur(CreateMoniteurRequest request) {
+        if (moniteurRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalStateException("Email already exists");
         }
-        return moniteurRepository.save(moniteur);
+
+        Moniteur moniteur = new Moniteur();
+        moniteur.setNom(request.getNom());
+        moniteur.setPrenom(request.getPrenom());
+        moniteur.setEmail(request.getEmail());
+        moniteur.setPassword(Base64.getEncoder().encodeToString(request.getPassword().getBytes()));
+        moniteur.setTelephone(request.getTelephone());
+        moniteur.setAdresse(request.getAdresse());
+        moniteur.setSpecialite(request.getSpecialite());
+        moniteur.setExperienceAnnees(request.getExperienceAnnees());
+        moniteur.setNumeroAgrement(request.getNumeroAgrement());
+        moniteur.setDisponible(true);
+
+        if (request.getAutoEcoleId() != null) {
+            AutoEcole autoEcole = autoEcoleRepository.findById(request.getAutoEcoleId())
+                    .orElseThrow(() -> new EntityNotFoundException("Auto-école not found with ID: " + request.getAutoEcoleId()));
+            moniteur.setAutoEcole(autoEcole);
+        }
+
+        try {
+            return moniteurRepository.save(moniteur);
+        } catch (Exception e) {
+            throw new RuntimeException("Error creating moniteur: " + e.getMessage(), e);
+        }
     }
 
     @Transactional
-    public Moniteur updateMoniteur(Long id, Moniteur moniteurDetails) {
+    public Moniteur updateMoniteur(Long id, CreateMoniteurRequest request) {
         Moniteur moniteur = moniteurRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Moniteur not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Moniteur not found with ID: " + id));
         
-        moniteur.setNom(moniteurDetails.getNom());
-        moniteur.setPrenom(moniteurDetails.getPrenom());
-        moniteur.setEmail(moniteurDetails.getEmail());
-        moniteur.setSpecialite(moniteurDetails.getSpecialite());
-        moniteur.setExperienceAnnees(moniteurDetails.getExperienceAnnees());
-        moniteur.setNumeroAgrement(moniteurDetails.getNumeroAgrement());
-        moniteur.setDisponible(moniteurDetails.getDisponible());
-        moniteur.setAutoEcole(moniteurDetails.getAutoEcole());
+        moniteur.setNom(request.getNom());
+        moniteur.setPrenom(request.getPrenom());
+        moniteur.setEmail(request.getEmail());
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            moniteur.setPassword(Base64.getEncoder().encodeToString(request.getPassword().getBytes()));
+        }
+        moniteur.setTelephone(request.getTelephone());
+        moniteur.setAdresse(request.getAdresse());
+        moniteur.setSpecialite(request.getSpecialite());
+        moniteur.setExperienceAnnees(request.getExperienceAnnees());
+        moniteur.setNumeroAgrement(request.getNumeroAgrement());
+
+        if (request.getAutoEcoleId() != null) {
+            AutoEcole autoEcole = autoEcoleRepository.findById(request.getAutoEcoleId())
+                    .orElseThrow(() -> new EntityNotFoundException("Auto-école not found with ID: " + request.getAutoEcoleId()));
+            moniteur.setAutoEcole(autoEcole);
+        }
         
-        return moniteurRepository.save(moniteur);
+        try {
+            return moniteurRepository.save(moniteur);
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating moniteur: " + e.getMessage(), e);
+        }
     }
 
     @Transactional
     public void deleteMoniteur(Long id) {
         if (!moniteurRepository.existsById(id)) {
-            throw new RuntimeException("Moniteur not found");
+            throw new EntityNotFoundException("Moniteur not found with ID: " + id);
         }
-        moniteurRepository.deleteById(id);
+        try {
+            moniteurRepository.deleteById(id);
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting moniteur: " + e.getMessage(), e);
+        }
     }
 
     @Transactional
     public Moniteur updateDisponibilite(Long id, boolean disponible) {
         Moniteur moniteur = moniteurRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Moniteur not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Moniteur not found with ID: " + id));
         moniteur.setDisponible(disponible);
-        return moniteurRepository.save(moniteur);
+        try {
+            return moniteurRepository.save(moniteur);
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating moniteur availability: " + e.getMessage(), e);
+        }
     }
 } 
