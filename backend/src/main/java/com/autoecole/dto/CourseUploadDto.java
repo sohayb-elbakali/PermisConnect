@@ -8,7 +8,8 @@ public class CourseUploadDto {
     private String description;
     private CourseType courseType;
     private Long autoEcoleId;
-    private MultipartFile file;
+    private MultipartFile file;  // For images and PDFs only
+    private String videoUrl;     // For video content (Google Drive URL)
     private String categorie;
     private String niveau;
     private Boolean estGratuit;
@@ -54,6 +55,14 @@ public class CourseUploadDto {
 
     public void setFile(MultipartFile file) {
         this.file = file;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 
     public String getCategorie() {

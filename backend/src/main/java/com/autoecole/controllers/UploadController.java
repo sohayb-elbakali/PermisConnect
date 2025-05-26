@@ -43,26 +43,50 @@ public class UploadController {
     public ResponseEntity<?> uploadCourseFile(@ModelAttribute CourseUploadDto courseUploadDto) {
         logger.info("Received course upload request: {}", courseUploadDto);
 
-        // Check if file is present
-        if (courseUploadDto.getFile() == null || courseUploadDto.getFile().isEmpty()) {
-            logger.warn("Upload request received with no file attached.");
-            return ResponseEntity.badRequest().body("Please select a file to upload.");
-        }
-
         try {
-            // Upload file to Cloudinary
-            logger.info("Attempting to upload file to Cloudinary: {}", courseUploadDto.getFile().getOriginalFilename());
-            Map uploadResult = cloudinaryService.uploadFile(courseUploadDto.getFile());
-            logger.info("Cloudinary upload result: {}", uploadResult);
+            String cloudinaryUrl = null;
+            String fileType = null;
 
-            String cloudinaryUrl = (String) uploadResult.get("url");
-            String fileType = (String) uploadResult.get("resource_type");
+            // Handle file upload for images and PDFs
+            if (courseUploadDto.getFile() != null && !courseUploadDto.getFile().isEmpty()) {
+                logger.info("Processing file upload: {}", courseUploadDto.getFile().getOriginalFilename());
+                
+                // Upload file to Cloudinary
+                Map uploadResult = cloudinaryService.uploadFile(courseUploadDto.getFile());
+                logger.info("Cloudinary upload result: {}", uploadResult);
 
-            if (cloudinaryUrl == null) {
-                logger.error("Cloudinary upload failed: No URL returned.");
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to get Cloudinary URL.");
+                cloudinaryUrl = (String) uploadResult.get("url");
+                String resourceType = (String) uploadResult.get("resource_type");
+                
+                // Determine the correct file type
+                if (courseUploadDto.getFile().getOriginalFilename() != null && 
+                    courseUploadDto.getFile().getOriginalFilename().toLowerCase().endsWith(".pdf")) {
+                    fileType = "raw";
+                    logger.info("File identified as PDF, setting fileType to 'raw'");
+                } else {
+                    fileType = "image";
+                    logger.info("File identified as image");
+                }
+
+                if (cloudinaryUrl == null) {
+                    logger.error("Cloudinary upload failed: No URL returned.");
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Failed to get Cloudinary URL. Upload result: " + uploadResult);
+                }
+            } 
+            // Handle video URL
+            else if (courseUploadDto.getVideoUrl() != null && !courseUploadDto.getVideoUrl().isEmpty()) {
+                logger.info("Processing video URL: {}", courseUploadDto.getVideoUrl());
+                cloudinaryUrl = courseUploadDto.getVideoUrl();
+                fileType = "video";
             }
-            logger.info("File uploaded successfully. Cloudinary URL: {}", cloudinaryUrl);
+            // No file or URL provided
+            else {
+                logger.warn("No file or video URL provided");
+                return ResponseEntity.badRequest().body("Please provide either a file (image/PDF) or a video URL.");
+            }
+
+            logger.info("File uploaded successfully. URL: {}", cloudinaryUrl);
 
             // Create Course entity based on type
             logger.info("Creating course entity for type: {}", courseUploadDto.getCourseType());
@@ -95,21 +119,19 @@ public class UploadController {
                  logger.debug("Created CoursPublic entity.");
             }
 
-            // Set common fields from DTO and Cloudinary URL
+            // Set common fields from DTO and URL
             course.setTitre(courseUploadDto.getTitre());
             course.setDescription(courseUploadDto.getDescription());
             course.setCourseType(courseUploadDto.getCourseType());
             course.setCloudinaryUrl(cloudinaryUrl);
             course.setFileType(fileType);
 
-            // Set default or placeholder values for mandatory fields in Cours if not in DTO
-            logger.debug("Setting default/placeholder fields for course.");
+            // Set default values
             course.setDateDebut(LocalDateTime.now());
             course.setDateFin(LocalDateTime.now().plusDays(30));
             course.setCapaciteMax(100);
             course.setPrix(0.0);
             course.setMoniteur(null);
-
 
             // Save course to database
             logger.info("Saving course entity to database.");
@@ -118,10 +140,14 @@ public class UploadController {
 
             return ResponseEntity.ok(savedCourse);
 
-        } catch (Exception e) { // Catch generic Exception to get any error
-            logger.error("An error occurred during course upload:", e);
-            // Return a more detailed error response
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred: " + e.getMessage());
+        } catch (IOException e) {
+            logger.error("File upload error: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("File upload failed: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("An unexpected error occurred during course upload:", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("An unexpected error occurred: " + e.getMessage());
         }
     }
 } 
