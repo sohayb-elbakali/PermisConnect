@@ -34,6 +34,13 @@ public abstract class Cours {
     @Column(nullable = false)
     private Double prix;
 
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private CourseType courseType;
+
+    @Column
+    private String cloudinaryUrl;
+
     @ManyToOne
     @JoinColumn(name = "moniteur_id")
     private Moniteur moniteur;

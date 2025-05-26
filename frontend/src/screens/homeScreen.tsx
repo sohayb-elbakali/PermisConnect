@@ -80,7 +80,7 @@ export default function HomeScreen() {
   };
 
   const handleTheoryPress = () => {
-    router.push('/theory');
+    router.push('/courses');
   };
 
   const handlePilotagePress = () => {
@@ -150,7 +150,7 @@ export default function HomeScreen() {
               progress={65}
               color="#ff6b35"
               icon="school-outline"
-              label="THEORETICAL TEST"
+              label="THEORETICAL COURS"
             />
           </TouchableOpacity>
 
