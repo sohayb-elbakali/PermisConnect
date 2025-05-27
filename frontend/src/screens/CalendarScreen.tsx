@@ -264,17 +264,12 @@ export default function CalendarScreen() {
               accessibilityRole="button"
             >
               <View style={styles.slotInfo}>
+                <Text style={styles.instructorName}>{slot.instructor}</Text>
                 <Text style={[
                   styles.slotTime,
                   !slot.available && styles.unavailableText
                 ]}>
                   {slot.time}
-                </Text>
-                <Text style={[
-                  styles.instructorText,
-                  !slot.available && styles.unavailableText
-                ]}>
-                  Instructor: {slot.instructor}
                 </Text>
               </View>
               <View style={[
@@ -333,10 +328,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333",
   },
-  instructorText: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 4,
+  instructorName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2a5298',
+    marginBottom: 4,
   },
   unavailableText: {
     color: "#999",
