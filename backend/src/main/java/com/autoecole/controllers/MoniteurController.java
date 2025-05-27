@@ -1,6 +1,7 @@
 package com.autoecole.controllers;
 
 import com.autoecole.dto.CreateMoniteurRequest;
+import com.autoecole.dto.MoniteurDTO;
 import com.autoecole.models.Moniteur;
 import com.autoecole.services.MoniteurService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/moniteurs")
@@ -56,8 +58,21 @@ public class MoniteurController {
     }
 
     @GetMapping("/auto-ecole/{autoEcoleId}")
-    public ResponseEntity<List<Moniteur>> getMoniteursByAutoEcole(@PathVariable Long autoEcoleId) {
-        return ResponseEntity.ok(moniteurService.getMoniteursByAutoEcole(autoEcoleId));
+    public ResponseEntity<List<MoniteurDTO>> getMoniteursByAutoEcole(@PathVariable Long autoEcoleId) {
+        List<MoniteurDTO> dtos = moniteurService.getMoniteursByAutoEcole(autoEcoleId)
+            .stream()
+            .map(moniteur -> {
+                MoniteurDTO dto = new MoniteurDTO();
+                dto.setId(moniteur.getId());
+                dto.setNom(moniteur.getNom());
+                dto.setPrenom(moniteur.getPrenom());
+                dto.setEmail(moniteur.getEmail());
+                dto.setTelephone(moniteur.getTelephone());
+                // Add more fields if needed
+                return dto;
+            })
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/available")

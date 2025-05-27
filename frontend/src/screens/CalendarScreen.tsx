@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,27 +8,28 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import moniteurService from "../services/moniteurService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { TimeSlotDisplay } from '../services/moniteurService';
 
-interface TimeSlot {
-  id: string;
-  time: string;
-  available: boolean;
-  instructor?: string;
+interface Moniteur {
+  id: number;
+  nom: string;
+  prenom: string;
 }
 
 interface ConfirmationProps {
-  selectedDate: string;
-  selectedSlot: TimeSlot;
+  selectedSlot: TimeSlotDisplay;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 const ConfirmationModal: React.FC<ConfirmationProps> = ({
-  selectedDate,
   selectedSlot,
   onConfirm,
   onCancel,
@@ -37,11 +38,6 @@ const ConfirmationModal: React.FC<ConfirmationProps> = ({
     <View style={styles.modalOverlay}>
       <View style={styles.modalContainer}>
         <Text style={styles.modalTitle}>Confirm Reservation</Text>
-        
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Date:</Text>
-          <Text style={styles.detailValue}>{selectedDate}</Text>
-        </View>
         
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Time:</Text>
@@ -56,11 +52,21 @@ const ConfirmationModal: React.FC<ConfirmationProps> = ({
         )}
         
         <View style={styles.modalButtons}>
-          <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
+          <TouchableOpacity 
+            style={styles.cancelBtn} 
+            onPress={onCancel}
+            accessibilityLabel="Cancel reservation"
+            accessibilityRole="button"
+          >
             <Text style={styles.cancelBtnText}>Cancel</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.confirmBtn} onPress={onConfirm}>
+          <TouchableOpacity 
+            style={styles.confirmBtn} 
+            onPress={onConfirm}
+            accessibilityLabel="Confirm reservation"
+            accessibilityRole="button"
+          >
             <Text style={styles.confirmBtnText}>Confirm</Text>
           </TouchableOpacity>
         </View>
@@ -71,21 +77,51 @@ const ConfirmationModal: React.FC<ConfirmationProps> = ({
 
 export default function CalendarScreen() {
   const [activeTab, setActiveTab] = useState("schedule");
-  const [selectedDate, setSelectedDate] = useState("");
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [showTimeSlots, setShowTimeSlots] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlotDisplay | null>(null);
+  const [timeSlots, setTimeSlots] = useState<TimeSlotDisplay[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [moniteurs, setMoniteurs] = useState<any[]>([]);
 
-  // Sample time slots
-  const timeSlots: TimeSlot[] = [
-    { id: '1', time: '09:00 - 10:00', available: true, instructor: 'John Doe' },
-    { id: '2', time: '10:00 - 11:00', available: true, instructor: 'Jane Smith' },
-    { id: '3', time: '11:00 - 12:00', available: false, instructor: 'Mike Johnson' },
-    { id: '4', time: '14:00 - 15:00', available: true, instructor: 'Sarah Wilson' },
-    { id: '5', time: '15:00 - 16:00', available: true, instructor: 'Tom Brown' },
-    { id: '6', time: '16:00 - 17:00', available: true, instructor: 'Lisa Davis' },
-  ];
+  useEffect(() => {
+    loadMoniteursAndTimeSlots();
+  }, []);
+
+  const loadMoniteursAndTimeSlots = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // 1. Get selected autoecole
+      const selectedAutoEcoleData = await AsyncStorage.getItem('selectedAutoEcole');
+      if (!selectedAutoEcoleData) {
+        throw new Error('No auto-école selected. Please select an auto-école first.');
+      }
+      const selectedAutoEcole = JSON.parse(selectedAutoEcoleData);
+      // 2. Fetch moniteurs for this autoecole
+      const moniteurs = await moniteurService.getMoniteursByAutoEcole(selectedAutoEcole.id);
+      if (!moniteurs || moniteurs.length === 0) {
+        throw new Error('No moniteurs found for this auto-école.');
+      }
+      setMoniteurs(moniteurs);
+      // 3. Fetch all time slots for all moniteurs
+      let allTimeSlots: TimeSlotDisplay[] = [];
+      for (const moniteur of moniteurs) {
+        try {
+          const slots = await moniteurService.getMoniteurTimeSlots(moniteur.id);
+          allTimeSlots = allTimeSlots.concat(slots);
+        } catch (err) {
+          console.error(`Error fetching slots for moniteur ${moniteur.id}:`, err);
+        }
+      }
+      allTimeSlots.sort((a, b) => a.time.localeCompare(b.time));
+      setTimeSlots(allTimeSlots);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to load time slots');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleProfilePress = () => {
     console.log("Profile pressed");
@@ -116,50 +152,7 @@ export default function CalendarScreen() {
     });
   };
 
-  const generateCalendarDays = () => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
-    
-    const days = [];
-    const today = new Date();
-    
-    for (let i = 0; i < 42; i++) {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
-      
-      const isCurrentMonth = date.getMonth() === month;
-      const isToday = 
-        date.getDate() === today.getDate() &&
-        date.getMonth() === today.getMonth() &&
-        date.getFullYear() === today.getFullYear();
-      
-      const dateString = date.toISOString().split('T')[0];
-      const isSelected = selectedDate === dateString;
-      
-      days.push({
-        date,
-        dateString,
-        day: date.getDate(),
-        isCurrentMonth,
-        isToday,
-        isSelected,
-      });
-    }
-    
-    return days;
-  };
-
-  const handleDatePress = (dateString: string) => {
-    setSelectedDate(dateString);
-    setShowTimeSlots(true);
-  };
-
-  const handleSlotPress = (slot: TimeSlot) => {
+  const handleSlotPress = (slot: TimeSlotDisplay) => {
     if (slot.available) {
       setSelectedSlot(slot);
       setShowConfirmation(true);
@@ -168,42 +161,44 @@ export default function CalendarScreen() {
     }
   };
 
-  const handleConfirmReservation = () => {
-    Alert.alert(
-      'Success',
-      'Your lesson has been scheduled!',
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            setShowConfirmation(false);
-            setShowTimeSlots(false);
-            setSelectedSlot(null);
+  const handleConfirmReservation = async () => {
+    if (!selectedSlot) return;
+
+    try {
+      setLoading(true);
+      // Add your reservation creation logic here
+      // await axios.post('http://localhost:8080/api/reservations', {
+      //   timeSlotId: selectedSlot.id,
+      //   clientId: currentUserId, // Get this from your auth context
+      //   dateReservation: selectedDate
+      // });
+
+      Alert.alert(
+        'Success',
+        'Your lesson has been scheduled!',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowConfirmation(false);
+              setSelectedSlot(null);
+              loadMoniteursAndTimeSlots(); // Refresh all time slots
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
+    } catch (err) {
+      Alert.alert('Error', 'Failed to create reservation');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancelConfirmation = () => {
     setShowConfirmation(false);
     setSelectedSlot(null);
   };
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    const newMonth = new Date(currentMonth);
-    if (direction === 'prev') {
-      newMonth.setMonth(newMonth.getMonth() - 1);
-    } else {
-      newMonth.setMonth(newMonth.getMonth() + 1);
-    }
-    setCurrentMonth(newMonth);
-  };
-
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
 
   if (showConfirmation && selectedSlot) {
     return (
@@ -215,7 +210,6 @@ export default function CalendarScreen() {
           onNotificationPress={handleNotificationPress}
         />
         <ConfirmationModal
-          selectedDate={selectedDate}
           selectedSlot={selectedSlot}
           onConfirm={handleConfirmReservation}
           onCancel={handleCancelConfirmation}
@@ -225,28 +219,37 @@ export default function CalendarScreen() {
     );
   }
 
-  if (showTimeSlots) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-        
-        <Header
-          title="Available Times"
-          onProfilePress={handleProfilePress}
-          onNotificationPress={handleNotificationPress}
-        />
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+      
+      <Header
+        title="Available Time Slots"
+        onProfilePress={handleProfilePress}
+        onNotificationPress={handleNotificationPress}
+      />
 
-        <View style={styles.slotsHeader}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => setShowTimeSlots(false)}
-          >
-            <Icon name="arrow-back" size={24} color="#ff6b35" />
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.selectedDateText}>{selectedDate}</Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#ff6b35" />
         </View>
-
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={loadMoniteursAndTimeSlots}
+            accessibilityLabel="Retry loading time slots"
+            accessibilityRole="button"
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : timeSlots.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No time slots available</Text>
+        </View>
+      ) : (
         <ScrollView style={styles.slotsContainer}>
           {timeSlots.map((slot) => (
             <TouchableOpacity
@@ -257,6 +260,8 @@ export default function CalendarScreen() {
               ]}
               onPress={() => handleSlotPress(slot)}
               disabled={!slot.available}
+              accessibilityLabel={`${slot.time} with ${slot.instructor}, ${slot.available ? 'available' : 'unavailable'}`}
+              accessibilityRole="button"
             >
               <View style={styles.slotInfo}>
                 <Text style={[
@@ -280,85 +285,13 @@ export default function CalendarScreen() {
                   styles.statusText,
                   slot.available ? styles.availableText : styles.unavailableStatusText
                 ]}>
-                  {slot.available ? 'Available' : 'Booked'}
+                  {slot.status}
                 </Text>
               </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
-
-        <Footer activeTab={activeTab} onTabPress={handleBottomNavPress} />
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-
-      <Header
-        title="Schedule"
-        onProfilePress={handleProfilePress}
-        onNotificationPress={handleNotificationPress}
-      />
-
-      <View style={styles.calendarContainer}>
-        {/* Calendar Header */}
-        <View style={styles.calendarHeader}>
-          <TouchableOpacity onPress={() => navigateMonth('prev')}>
-            <Icon name="chevron-back" size={24} color="#ff6b35" />
-          </TouchableOpacity>
-          
-          <Text style={styles.monthYear}>
-            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-          </Text>
-          
-          <TouchableOpacity onPress={() => navigateMonth('next')}>
-            <Icon name="chevron-forward" size={24} color="#ff6b35" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Day Headers */}
-        <View style={styles.dayHeaders}>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <Text key={day} style={styles.dayHeader}>
-              {day}
-            </Text>
-          ))}
-        </View>
-
-        {/* Calendar Grid */}
-        <View style={styles.calendarGrid}>
-          {generateCalendarDays().map((day, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.dayCell,
-                day.isToday && styles.todayCell,
-                day.isSelected && styles.selectedCell,
-                !day.isCurrentMonth && styles.otherMonthCell,
-              ]}
-              onPress={() => day.isCurrentMonth && handleDatePress(day.dateString)}
-              disabled={!day.isCurrentMonth}
-            >
-              <Text
-                style={[
-                  styles.dayText,
-                  day.isToday && styles.todayText,
-                  day.isSelected && styles.selectedText,
-                  !day.isCurrentMonth && styles.otherMonthText,
-                ]}
-              >
-                {day.day}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <Text style={styles.instructionText}>
-        Tap on a date to view available time slots
-      </Text>
+      )}
 
       <Footer activeTab={activeTab} onTabPress={handleBottomNavPress} />
     </SafeAreaView>
@@ -370,109 +303,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
-  calendarContainer: {
-    marginHorizontal: 20,
-    marginTop: 20,
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-  },
-  calendarHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  monthYear: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  dayHeaders: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 10,
-  },
-  dayHeader: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#666",
-    textAlign: "center",
-    width: 40,
-  },
-  calendarGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  dayCell: {
-    width: "14.28%",
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 5,
-  },
-  todayCell: {
-    backgroundColor: "#fff0ed",
-    borderRadius: 20,
-  },
-  selectedCell: {
-    backgroundColor: "#ff6b35",
-    borderRadius: 20,
-  },
-  otherMonthCell: {
-    opacity: 0.3,
-  },
-  dayText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  todayText: {
-    color: "#ff6b35",
-    fontWeight: "bold",
-  },
-  selectedText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  otherMonthText: {
-    color: "#ccc",
-  },
-  instructionText: {
-    textAlign: "center",
-    color: "#666",
-    marginTop: 20,
-    fontSize: 16,
-    paddingHorizontal: 20,
-  },
-  slotsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  backText: {
-    marginLeft: 8,
-    color: "#ff6b35",
-    fontSize: 16,
-  },
-  selectedDateText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-  },
   slotsContainer: {
     flex: 1,
-    paddingHorizontal: 20,
+    padding: 15,
   },
   slotCard: {
     backgroundColor: "white",
@@ -528,6 +361,45 @@ const styles = StyleSheet.create({
   },
   unavailableStatusText: {
     color: "#f44336",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    color: "#f44336",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: "#ff6b35",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
   },
   modalOverlay: {
     flex: 1,

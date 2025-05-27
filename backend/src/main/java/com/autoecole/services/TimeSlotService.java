@@ -1,5 +1,6 @@
 package com.autoecole.services;
 
+import com.autoecole.dto.CalendarTimeSlotResponse;
 import com.autoecole.models.TimeSlot;
 import com.autoecole.repositories.MoniteurRepository;
 import com.autoecole.repositories.TimeSlotRepository;
@@ -104,5 +105,24 @@ public class TimeSlotService {
                 .orElseThrow(() -> new EntityNotFoundException("Time slot not found"));
 
         timeSlotRepository.delete(timeSlot);
+    }
+
+    public List<CalendarTimeSlotResponse> getCalendarData(Long moniteurId, LocalDateTime date) {
+        // Verify that the moniteur exists
+        moniteurRepository.findById(moniteurId)
+                .orElseThrow(() -> new EntityNotFoundException("Moniteur not found"));
+
+        // Get start and end of the day
+        LocalDateTime startOfDay = date.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = date.toLocalDate().atTime(23, 59, 59);
+
+        // Get all time slots for the day
+        List<TimeSlot> timeSlots = timeSlotRepository.findByMoniteurIdAndStartTimeBetween(
+            moniteurId, startOfDay, endOfDay);
+
+        // Convert to calendar response
+        return timeSlots.stream()
+            .map(CalendarTimeSlotResponse::fromTimeSlot)
+            .toList();
     }
 } 

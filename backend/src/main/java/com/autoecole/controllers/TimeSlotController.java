@@ -1,6 +1,8 @@
 package com.autoecole.controllers;
 
+import com.autoecole.dto.CalendarTimeSlotResponse;
 import com.autoecole.dto.CreateTimeSlotRequest;
+import com.autoecole.dto.TimeSlotDTO;
 import com.autoecole.models.TimeSlot;
 import com.autoecole.services.TimeSlotService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/time-slots")
@@ -52,9 +55,21 @@ public class TimeSlotController {
         @ApiResponse(responseCode = "404", description = "Moniteur not found")
     })
     @GetMapping("/moniteur/{moniteurId}")
-    public ResponseEntity<List<TimeSlot>> getMoniteurTimeSlots(
-            @Parameter(description = "ID of the moniteur") @PathVariable Long moniteurId) {
-        return ResponseEntity.ok(timeSlotService.getMoniteurTimeSlots(moniteurId));
+    public ResponseEntity<List<TimeSlotDTO>> getMoniteurTimeSlots(@PathVariable Long moniteurId) {
+        return ResponseEntity.ok(
+            timeSlotService.getMoniteurTimeSlots(moniteurId)
+                .stream()
+                .map(slot -> {
+                    TimeSlotDTO dto = new TimeSlotDTO();
+                    dto.setId(slot.getId());
+                    dto.setStartTime(slot.getStartTime() != null ? slot.getStartTime().toString() : null);
+                    dto.setEndTime(slot.getEndTime() != null ? slot.getEndTime().toString() : null);
+                    dto.setStatus(slot.getStatus() != null ? slot.getStatus().toString() : null);
+                    dto.setInstructor(slot.getMoniteur() != null ? slot.getMoniteur().getPrenom() + " " + slot.getMoniteur().getNom() : null);
+                    return dto;
+                })
+                .collect(Collectors.toList())
+        );
     }
 
     @Operation(summary = "Get time slots by date range",
@@ -103,5 +118,20 @@ public class TimeSlotController {
             @Parameter(description = "ID of the time slot to delete") @PathVariable Long id) {
         timeSlotService.deleteTimeSlot(id);
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Get calendar data for a specific date",
+               description = "Retrieves all time slots and reservations for a specific moniteur on a given date")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Calendar data retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid date format"),
+        @ApiResponse(responseCode = "404", description = "Moniteur not found")
+    })
+    @GetMapping("/calendar/{moniteurId}")
+    public ResponseEntity<List<CalendarTimeSlotResponse>> getCalendarData(
+            @Parameter(description = "ID of the moniteur") @PathVariable Long moniteurId,
+            @Parameter(description = "Date to check (format: yyyy-MM-dd)") 
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime date) {
+        return ResponseEntity.ok(timeSlotService.getCalendarData(moniteurId, date));
     }
 } 
