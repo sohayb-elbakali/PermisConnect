@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,9 +13,9 @@ import {
 import Icon from "react-native-vector-icons/Ionicons";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import moniteurService from "../services/moniteurService";
+import moniteurService, { TimeSlotDisplay } from "../services/moniteurService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { TimeSlotDisplay } from '../services/moniteurService';
+import { useRouter } from "expo-router";
 
 interface Moniteur {
   id: number;
@@ -83,45 +83,62 @@ export default function CalendarScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [moniteurs, setMoniteurs] = useState<any[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const router = useRouter();
 
-  useEffect(() => {
-    loadMoniteursAndTimeSlots();
-  }, []);
-
-  const loadMoniteursAndTimeSlots = async () => {
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      // 1. Get selected autoecole
+      const userIdStr = await AsyncStorage.getItem("userId");
+      const userId = userIdStr ? Number(userIdStr) : null;
+      setCurrentUserId(userId);
+
+      // Get selected autoecole
       const selectedAutoEcoleData = await AsyncStorage.getItem('selectedAutoEcole');
-      if (!selectedAutoEcoleData) {
-        throw new Error('No auto-école selected. Please select an auto-école first.');
-      }
+      if (!selectedAutoEcoleData) throw new Error('No auto-école selected.');
       const selectedAutoEcole = JSON.parse(selectedAutoEcoleData);
-      // 2. Fetch moniteurs for this autoecole
+
+      // Fetch moniteurs
       const moniteurs = await moniteurService.getMoniteursByAutoEcole(selectedAutoEcole.id);
-      if (!moniteurs || moniteurs.length === 0) {
-        throw new Error('No moniteurs found for this auto-école.');
-      }
       setMoniteurs(moniteurs);
-      // 3. Fetch all time slots for all moniteurs
+
+      // Fetch all time slots for all moniteurs
       let allTimeSlots: TimeSlotDisplay[] = [];
       for (const moniteur of moniteurs) {
-        try {
-          const slots = await moniteurService.getMoniteurTimeSlots(moniteur.id);
-          allTimeSlots = allTimeSlots.concat(slots);
-        } catch (err) {
-          console.error(`Error fetching slots for moniteur ${moniteur.id}:`, err);
-        }
+        const slots = await moniteurService.getMoniteurTimeSlots(moniteur.id);
+        allTimeSlots = allTimeSlots.concat(slots);
       }
       allTimeSlots.sort((a, b) => a.time.localeCompare(b.time));
-      setTimeSlots(allTimeSlots);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to load time slots');
+
+      // Fetch reservations for current user
+      let userReservations: { timeSlotId: number }[] = [];
+      if (userId) {
+        userReservations = await moniteurService.getReservationsByClient(userId);
+      }
+
+      // Debug: Log all slots and user reservations
+      console.log('All slots:', allTimeSlots);
+      console.log('User reservations:', userReservations);
+      console.log('Current userId:', userId);
+      const userSlotIds = new Set(userReservations.map(r => r.timeSlotId));
+      const slotsWithBooker = allTimeSlots.map(slot =>
+        userSlotIds.has(slot.id)
+          ? { ...slot, bookedBy: userId ?? undefined }
+          : slot
+      );
+      // Debug: Log slotsWithBooker
+      console.log('slotsWithBooker:', slotsWithBooker);
+      setTimeSlots(slotsWithBooker);
+    } catch (err: any) {
+      setError(err.message || "Failed to load data");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleProfilePress = () => {
     console.log("Profile pressed");
@@ -156,48 +173,35 @@ export default function CalendarScreen() {
     if (slot.available) {
       setSelectedSlot(slot);
       setShowConfirmation(true);
-    } else {
-      Alert.alert('Unavailable', 'This time slot is already booked.');
     }
   };
 
   const handleConfirmReservation = async () => {
     if (!selectedSlot) return;
-
+    setLoading(true);
     try {
-      setLoading(true);
-      // Add your reservation creation logic here
-      // await axios.post('http://localhost:8080/api/reservations', {
-      //   timeSlotId: selectedSlot.id,
-      //   clientId: currentUserId, // Get this from your auth context
-      //   dateReservation: selectedDate
-      // });
-
-      Alert.alert(
-        'Success',
-        'Your lesson has been scheduled!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setShowConfirmation(false);
-              setSelectedSlot(null);
-              loadMoniteursAndTimeSlots(); // Refresh all time slots
-            }
-          }
-        ]
-      );
+      await moniteurService.updateTimeSlotStatus(selectedSlot.id, 'BOOKED');
+      setShowConfirmation(false);
+      setSelectedSlot(null);
+      await loadData();
+      router.replace('/calendar');
     } catch (err) {
-      Alert.alert('Error', 'Failed to create reservation');
-      console.error(err);
+      Alert.alert('Error', 'Failed to book slot');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancelConfirmation = () => {
-    setShowConfirmation(false);
-    setSelectedSlot(null);
+  const handleCancelBooking = async (slot: TimeSlotDisplay) => {
+    setLoading(true);
+    try {
+      await moniteurService.updateTimeSlotStatus(slot.id, 'AVAILABLE');
+      await loadData();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to cancel booking');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (showConfirmation && selectedSlot) {
@@ -212,7 +216,10 @@ export default function CalendarScreen() {
         <ConfirmationModal
           selectedSlot={selectedSlot}
           onConfirm={handleConfirmReservation}
-          onCancel={handleCancelConfirmation}
+          onCancel={() => {
+            setShowConfirmation(false);
+            setSelectedSlot(null);
+          }}
         />
         <Footer activeTab={activeTab} onTabPress={handleBottomNavPress} />
       </SafeAreaView>
@@ -238,7 +245,7 @@ export default function CalendarScreen() {
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity 
             style={styles.retryButton}
-            onPress={loadMoniteursAndTimeSlots}
+            onPress={loadData}
             accessibilityLabel="Retry loading time slots"
             accessibilityRole="button"
           >
@@ -252,38 +259,53 @@ export default function CalendarScreen() {
       ) : (
         <ScrollView style={styles.slotsContainer}>
           {timeSlots.map((slot) => (
-            <TouchableOpacity
-              key={slot.id}
-              style={[
-                styles.slotCard,
-                !slot.available && styles.unavailableSlot
-              ]}
-              onPress={() => handleSlotPress(slot)}
-              disabled={!slot.available}
-              accessibilityLabel={`${slot.time} with ${slot.instructor}, ${slot.available ? 'available' : 'unavailable'}`}
-              accessibilityRole="button"
-            >
-              <View style={styles.slotInfo}>
-                <Text style={styles.instructorName}>{slot.instructor}</Text>
-                <Text style={[
-                  styles.slotTime,
-                  !slot.available && styles.unavailableText
+            <View key={slot.id} style={{marginBottom: 12}}>
+              <TouchableOpacity
+                style={[
+                  styles.slotCard,
+                  !slot.available && styles.unavailableSlot
+                ]}
+                onPress={() => handleSlotPress(slot)}
+                disabled={!slot.available}
+                accessibilityLabel={`${slot.time} with ${slot.instructor}, ${slot.available ? 'available' : 'unavailable'}`}
+                accessibilityRole="button"
+              >
+                <View style={styles.slotInfo}>
+                  <Text style={styles.instructorName}>{slot.instructor}</Text>
+                  <Text style={[
+                    styles.slotTime,
+                    !slot.available && styles.unavailableText
+                  ]}>
+                    {slot.time}
+                  </Text>
+                </View>
+                <View style={[
+                  styles.statusBadge,
+                  slot.available ? styles.availableBadge : styles.unavailableBadge
                 ]}>
-                  {slot.time}
-                </Text>
-              </View>
-              <View style={[
-                styles.statusBadge,
-                slot.available ? styles.availableBadge : styles.unavailableBadge
-              ]}>
-                <Text style={[
-                  styles.statusText,
-                  slot.available ? styles.availableText : styles.unavailableStatusText
-                ]}>
-                  {slot.status}
-                </Text>
-              </View>
-            </TouchableOpacity>
+                  <Text style={[
+                    styles.statusText,
+                    slot.available ? styles.availableText : styles.unavailableStatusText
+                  ]}>
+                    {slot.status}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              {/* Cancel button for slots booked by current user, debug: show for all booked slots */}
+              {!slot.available && (
+                <TouchableOpacity
+                  style={[styles.cancelBtn, { marginTop: 6 }]}
+                  onPress={() => handleCancelBooking(slot)}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                  {slot.bookedBy !== currentUserId && (
+                    <Text style={{ color: 'red', fontSize: 10 }}>
+                      [DEBUG: bookedBy={String(slot.bookedBy)}, user={String(currentUserId)}]
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
           ))}
         </ScrollView>
       )}
