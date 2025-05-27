@@ -33,14 +33,22 @@ class MoniteurService {
   async getMoniteurTimeSlots(moniteurId: number): Promise<TimeSlotDisplay[]> {
     try {
       const response = await axios.get(`${this.baseUrl}/time-slots/moniteur/${moniteurId}`);
-      // Flatten and map the deeply nested response
-      return response.data.map((slot: any) => ({
-        id: slot.id,
-        time: `${slot.startTime?.substring(11, 16)} - ${slot.endTime?.substring(11, 16)}`,
-        instructor: slot.moniteur ? `${slot.moniteur.prenom} ${slot.moniteur.nom}` : '',
-        status: slot.status,
-        available: slot.status === 'AVAILABLE',
-      }));
+      // Handle both DTO and nested moniteur object
+      return response.data.map((slot: any) => {
+        let instructor = 'Unknown Instructor';
+        if (slot.instructor) {
+          instructor = slot.instructor;
+        } else if (slot.moniteur && (slot.moniteur.prenom || slot.moniteur.nom)) {
+          instructor = `${slot.moniteur.prenom || ''} ${slot.moniteur.nom || ''}`.trim();
+        }
+        return {
+          id: slot.id,
+          time: `${slot.startTime?.substring(11, 16)} - ${slot.endTime?.substring(11, 16)}`,
+          instructor,
+          status: slot.status,
+          available: slot.status === 'AVAILABLE',
+        };
+      });
     } catch (error) {
       console.error('Error fetching time slots:', error);
       throw error;
