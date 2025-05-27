@@ -298,11 +298,6 @@ export default function CalendarScreen() {
                   onPress={() => handleCancelBooking(slot)}
                 >
                   <Text style={styles.cancelBtnText}>Cancel</Text>
-                  {slot.bookedBy !== currentUserId && (
-                    <Text style={{ color: 'red', fontSize: 10 }}>
-                      [DEBUG: bookedBy={String(slot.bookedBy)}, user={String(currentUserId)}]
-                    </Text>
-                  )}
                 </TouchableOpacity>
               )}
             </View>
