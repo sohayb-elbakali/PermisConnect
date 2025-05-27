@@ -36,6 +36,8 @@ interface UserProfile {
     id: number;
     nom: string;
   };
+  numeroPermis?: string;
+  typePermis?: string;
 }
 
 export default function ProfileScreen() {
@@ -129,9 +131,23 @@ export default function ProfileScreen() {
         throw new Error("No authentication token found");
       }
 
+      // Format the request data according to ClientRequest requirements
+      const requestData = {
+        nom: editedProfile.nom,
+        prenom: editedProfile.prenom,
+        email: editedProfile.email,
+        telephone: editedProfile.telephone,
+        adresse: editedProfile.adresse,
+        dateNaissance: editedProfile.dateNaissance,
+        numeroPermis: editedProfile.numeroPermis || "",
+        typePermis: editedProfile.typePermis || "",
+        // Keep the existing password if not changed
+        password: "" // The backend will ignore empty password
+      };
+
       const response = await axios.put(
         `${API_URL}/clients/${editedProfile.id}`,
-        editedProfile,
+        requestData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
