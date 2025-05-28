@@ -1,11 +1,17 @@
 import React from "react";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, ViewStyle, TextStyle } from "react-native";
-import { Colors } from '../constants/Colors';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextStyle,
+  TouchableOpacity,
+  ViewStyle,
+} from "react-native";
 
 export interface ButtonProps {
   title: string;
   onPress: () => void;
-  type?: 'primary' | 'secondary';
+  type?: "primary" | "secondary";
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
@@ -15,31 +21,36 @@ export interface ButtonProps {
 const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
-  type = 'primary',
+  type = "primary",
   loading = false,
   disabled = false,
   style,
-  textStyle
+  textStyle,
 }) => {
   return (
     <TouchableOpacity
       style={[
         styles.button,
-        type === 'secondary' ? styles.secondaryButton : styles.primaryButton,
+        type === "secondary" ? styles.secondaryButton : styles.primaryButton,
         disabled && styles.disabledButton,
-        style
+        style,
       ]}
       onPress={onPress}
       disabled={disabled || loading}
     >
       {loading ? (
-        <ActivityIndicator color={type === 'primary' ? '#fff' : '#007AFF'} />
+        <ActivityIndicator
+          color={type === "primary" ? "#fff" : "#007AFF"}
+          testID="ActivityIndicator"
+        />
       ) : (
-        <Text style={[
-          styles.text,
-          type === 'secondary' ? styles.secondaryText : styles.primaryText,
-          textStyle
-        ]}>
+        <Text
+          style={[
+            styles.text,
+            type === "secondary" ? styles.secondaryText : styles.primaryText,
+            textStyle,
+          ]}
+        >
           {title}
         </Text>
       )}

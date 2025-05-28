@@ -1,6 +1,45 @@
-# Auto-École Backend
+# PermisConnect Backend
 
-This is the backend application for the Auto-École project, built with Spring Boot.
+This is the backend of the PermisConnect application, built with Spring Boot. It provides the REST API and business logic for the driving school platform.
+
+## Features
+- User authentication and management
+- Course and lesson APIs
+- Progress tracking
+- Notification endpoints
+- Integration with frontend (React Native/Expo)
+
+## Getting Started (Development)
+
+1. **Install dependencies and build:**
+   ```sh
+   mvn clean install
+   ```
+2. **Run the Spring Boot app:**
+   ```sh
+   mvn spring-boot:run
+   ```
+3. **API will be available at:**
+   - [http://localhost:8080](http://localhost:8080)
+
+## Running with Docker
+
+1. **Build and start with Docker Compose (from project root):**
+   ```sh
+   docker-compose up --build
+   ```
+2. **API will be available at:**
+   - [http://localhost:8080](http://localhost:8080)
+
+## Project Structure
+- `src/` - Java source code
+- `Dockerfile` - For containerizing the backend
+
+## Environment Variables
+- Configure database and other settings in `application.properties` or via environment variables as needed.
+
+---
+For more details, see the main project README or contact the maintainers.
 
 ## Prerequisites
 

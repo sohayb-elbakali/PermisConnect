@@ -1,50 +1,58 @@
-# Welcome to your Expo app 👋
+# PermisConnect Frontend
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+This is the frontend of the PermisConnect application, built with Expo (React Native). It provides the user interface for students and instructors to interact with the driving school platform.
 
-## Get started
+## Features
 
-1. Install dependencies
+- User authentication and registration
+- Course and lesson management
+- Progress tracking
+- Notifications and more
 
-   ```bash
+## Getting Started (Development)
+
+1. **Install dependencies:**
+
+   ```sh
    npm install
    ```
 
-2. Start the app
+2. **Start the Expo development server:**
 
-   ```bash
+   ```sh
+   npm start
+   ```
+
+   or
+
+   ```sh
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+3. **Open the app:**
+   - Use the Expo Go app on your phone to scan the QR code, or
+   - Run on an emulator/simulator.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Running with Docker
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+1. **Build and start with Docker Compose (from project root):**
 
-## Get a fresh project
+   ```sh
+   docker-compose up --build
+   ```
 
-When you're ready, run:
+2. **Access the Expo DevTools:**
+   - Visit [http://localhost:8081](http://localhost:8081) in your browser.
+   - Scan the QR code with Expo Go to open the app on your device.
 
-```bash
-npm run reset-project
-```
+## Project Structure
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- `src/` - App source code
+- `Dockerfile` - For containerizing the frontend
 
-## Learn more
+## Environment Variables
 
-To learn more about developing your project with Expo, look at the following resources:
+- Make sure to configure API URLs to point to the backend (see `.env` or config files as needed).
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+For more details, see the main project README or contact the maintainers.
