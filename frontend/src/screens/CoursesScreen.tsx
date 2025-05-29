@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 import axios from "axios";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -45,6 +46,7 @@ export default function CoursesScreen() {
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [showPayWarningId, setShowPayWarningId] = useState<number | null>(null);
 
   useEffect(() => {
     const loadUserInfoAndCourses = async () => {
@@ -92,7 +94,13 @@ export default function CoursesScreen() {
         }
 
         if (response.data) {
-          setCourses(response.data);
+          // Merge paid status from AsyncStorage
+          const paidCoursesStr = await AsyncStorage.getItem("paidCourses");
+          let paidCourses = paidCoursesStr ? JSON.parse(paidCoursesStr) : [];
+          const updatedCourses = response.data.map((course: any) =>
+            paidCourses.includes(course.id.toString()) ? { ...course, estGratuit: true } : course
+          );
+          setCourses(updatedCourses);
         }
       } catch (error) {
         console.error("Error loading courses:", error);
@@ -104,6 +112,22 @@ export default function CoursesScreen() {
 
     loadUserInfoAndCourses();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkPayment = async () => {
+        const hasPaid = await AsyncStorage.getItem("hasPaid");
+        if (!hasPaid) {
+          Alert.alert(
+            "Payment Required",
+            "You must pay before accessing courses.",
+            [{ text: "OK", onPress: () => router.replace("/payment") }]
+          );
+        }
+      };
+      checkPayment();
+    }, [router])
+  );
 
   const handleCoursePress = (course: Course) => {
     router.push({
@@ -142,76 +166,60 @@ export default function CoursesScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.courseItem}
-            onPress={() => handleCoursePress(item)}
+            onPress={() => {
+              if (item.estGratuit === false) {
+                setShowPayWarningId(item.id);
+                Alert.alert(
+                  "Payment Required",
+                  "You must pay for this course before accessing it."
+                );
+                return;
+              }
+              handleCoursePress(item);
+            }}
+            disabled={false}
           >
             <Text style={styles.courseTitle}>{item.titre}</Text>
             <Text style={styles.courseDescription}>{item.description}</Text>
-            {/* Show payment status only for unpaid public courses */}
-            {item.courseType === "PUBLIC" && item.estGratuit === false && (
+            {/* Show 'Free' in green for free courses */}
+            {item.estGratuit === true && (
               <Text
-                style={{
-                  color: "red",
-                  fontWeight: "bold",
-                  marginBottom: 5,
-                }}
+                style={{ color: "green", fontWeight: "bold", marginBottom: 5 }}
               >
-                Unpaid
+                Free
               </Text>
             )}
-            {/* Show Pay button for public, non-free courses */}
-            {item.courseType === "PUBLIC" && item.estGratuit === false && (
+            {/* Show Pay button for unpaid courses */}
+            {item.estGratuit === false && (
               <TouchableOpacity
                 style={{
-                  marginTop: 0,
-                  marginBottom: 5,
+                  marginTop: 8,
                   backgroundColor: "#ff6b35",
-                  paddingVertical: 4,
-                  paddingHorizontal: 12,
-                  borderRadius: 4,
-                  alignItems: "flex-start",
+                  paddingVertical: 6,
+                  paddingHorizontal: 18,
+                  borderRadius: 6,
+                  alignItems: "center",
                   alignSelf: "flex-start",
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 2,
-                  elevation: 2,
                 }}
-                activeOpacity={0.7}
-                onPress={async () => {
-                  try {
-                    const token = await AsyncStorage.getItem("token");
-                    const response = await axios.post(
-                      `${API_URL}/courses/${item.id}/create-payment-session`,
-                      {},
-                      {
-                        headers: {
-                          Authorization: `Bearer ${token}`,
-                          "Content-Type": "application/json",
-                        },
-                      }
-                    );
-                    const sessionUrl = response.data.sessionUrl;
-                    if (sessionUrl) {
-                      // Navigate to payment screen and pass sessionUrl
-                      router.push({
-                        pathname: "/payment",
-                        params: { sessionUrl },
-                      });
-                    } else {
-                      Alert.alert("Error", "No payment session URL returned.");
-                    }
-                  } catch (error) {
-                    console.error("Error creating payment session:", error);
-                    Alert.alert("Error", "Failed to initiate payment.");
-                  }
-                }}
+                onPress={() =>
+                  router.replace({
+                    pathname: "/payment",
+                    params: { courseId: item.id },
+                  })
+                }
               >
                 <Text
-                  style={{ color: "#fff", fontWeight: "bold", fontSize: 13 }}
+                  style={{ color: "#fff", fontWeight: "bold", fontSize: 15 }}
                 >
                   Pay
                 </Text>
               </TouchableOpacity>
+            )}
+            {/* Show warning line only if user tried to open this unpaid course */}
+            {item.estGratuit === false && showPayWarningId === item.id && (
+              <Text style={{ color: "red", fontWeight: "bold", marginTop: 8 }}>
+                You must pay for this course before accessing it.
+              </Text>
             )}
           </TouchableOpacity>
         )}
