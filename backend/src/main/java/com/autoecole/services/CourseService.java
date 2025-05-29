@@ -102,6 +102,11 @@ public class CourseService {
         return new TheoreticalCourseProgress(totalTheoreticalCount, viewedCount);
     }
 
+    public Cours getCourseById(Long courseId) {
+        return coursRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found with id: " + courseId));
+    }
+
     // Helper class to return theoretical course progress
     public static class TheoreticalCourseProgress {
         private int totalTheoreticalCourses;
