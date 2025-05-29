@@ -3,6 +3,8 @@ package com.autoecole.models;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
 
 import java.time.LocalDateTime;
 
@@ -11,6 +13,15 @@ import java.time.LocalDateTime;
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
 @Table(name = "cours")
+@JsonTypeInfo(
+  use = JsonTypeInfo.Id.NAME,
+  include = JsonTypeInfo.As.PROPERTY,
+  property = "type"
+)
+@JsonSubTypes({
+  @JsonSubTypes.Type(value = CoursPublic.class, name = "PUBLIC"),
+  @JsonSubTypes.Type(value = CoursPrive.class, name = "PRIVATE")
+})
 public abstract class Cours {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
