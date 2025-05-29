@@ -1,42 +1,35 @@
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
   Animated,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
-import { router } from "expo-router";
+import Button from "../components/Button";
+import TextField from "../components/TextField";
 import { useAuth } from "../contexts/AuthContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import TextField from '../components/TextField';
-import Button from '../components/Button';
-import { authService } from '../services/authService';
-import { Colors } from '../constants/Colors';
+import { authService } from "../services/authService";
 
 const LoginScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
-  const [notification, setNotification] = useState({ message: '', type: '' });
+  const [notification, setNotification] = useState({ message: "", type: "" });
   const [notificationOpacity] = useState(new Animated.Value(0));
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
   const [errors, setErrors] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
 
   const { login } = useAuth();
 
-  const showNotification = (message: string, type: 'success' | 'error') => {
+  const showNotification = (message: string, type: "success" | "error") => {
     setNotification({ message, type });
     Animated.sequence([
       Animated.timing(notificationOpacity, {
@@ -54,37 +47,37 @@ const LoginScreen = ({ navigation }: any) => {
   };
 
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
     // Clear error when user types
     if (errors[field as keyof typeof errors]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [field]: ''
+        [field]: "",
       }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {
-      email: '',
-      password: ''
+      email: "",
+      password: "",
     };
 
     if (!formData.email.trim()) {
-      newErrors.email = 'L\'email est requis';
+      newErrors.email = "L'email est requis";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Format d\'email invalide';
+      newErrors.email = "Format d'email invalide";
     }
 
     if (!formData.password.trim()) {
-      newErrors.password = 'Le mot de passe est requis';
+      newErrors.password = "Le mot de passe est requis";
     }
 
     setErrors(newErrors);
-    return !Object.values(newErrors).some(error => error !== '');
+    return !Object.values(newErrors).some((error) => error !== "");
   };
 
   const handleSubmit = async () => {
@@ -94,29 +87,32 @@ const LoginScreen = ({ navigation }: any) => {
 
     try {
       setLoading(true);
-      console.log('Submitting login with:', formData);
+      console.log("Submitting login with:", formData);
       const response = await authService.login(formData);
-      console.log('Login response:', response);
-      
-      if (response) {
+      console.log("Login response:", response);
+
+      if (response && response.user) {
         // Generate token from response
-        const token = btoa(JSON.stringify({
-          id: response.id,
-          email: response.user.email,
-          timestamp: new Date().getTime()
-        }));
+        const token = btoa(
+          JSON.stringify({
+            id: response.id,
+            email: response.user.email,
+            timestamp: new Date().getTime(),
+          })
+        );
 
         await login(token);
-        showNotification('Connexion réussie', 'success');
+        showNotification("Connexion réussie", "success");
         setTimeout(() => {
-          router.replace('/autoecole-selection');
+          router.replace("/autoecole-selection");
         }, 2000);
       } else {
-        showNotification('Échec de la connexion', 'error');
+        console.error("Login failed: Invalid response structure", response);
+        showNotification("Échec de la connexion", "error");
       }
     } catch (error: any) {
-      console.error('Login error:', error);
-      showNotification(error.message || 'Échec de la connexion', 'error');
+      console.error("Login error:", error);
+      showNotification(error.message || "Échec de la connexion", "error");
     } finally {
       setLoading(false);
     }
@@ -138,7 +134,7 @@ const LoginScreen = ({ navigation }: any) => {
           <TextField
             label="Email"
             value={formData.email}
-            onChangeText={(text) => handleChange('email', text)}
+            onChangeText={(text) => handleChange("email", text)}
             error={errors.email}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -147,7 +143,7 @@ const LoginScreen = ({ navigation }: any) => {
           <TextField
             label="Mot de passe"
             value={formData.password}
-            onChangeText={(text) => handleChange('password', text)}
+            onChangeText={(text) => handleChange("password", text)}
             error={errors.password}
             secureTextEntry
           />
@@ -161,7 +157,7 @@ const LoginScreen = ({ navigation }: any) => {
 
           <Button
             title="Pas encore de compte ? S'inscrire"
-            onPress={() => router.replace('/register')}
+            onPress={() => router.replace("/register")}
             type="secondary"
             style={styles.registerButton}
           />
@@ -172,7 +168,8 @@ const LoginScreen = ({ navigation }: any) => {
             styles.notification,
             {
               opacity: notificationOpacity,
-              backgroundColor: notification.type === 'success' ? '#4CAF50' : '#f44336',
+              backgroundColor:
+                notification.type === "success" ? "#4CAF50" : "#f44336",
             },
           ]}
         >
@@ -209,9 +206,9 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   submitButton: {
     marginTop: 20,
@@ -220,21 +217,21 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   notification: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     left: 20,
     right: 20,
     padding: 15,
     borderRadius: 8,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   notificationText: {
-    color: '#fff',
-    textAlign: 'center',
+    color: "#fff",
+    textAlign: "center",
     fontSize: 16,
   },
 });
