@@ -42,6 +42,9 @@ public class AutoEcole {
     private String description;
 
     private String horaires;
+    
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean premium = false;
 
     @OneToMany(mappedBy = "autoEcole", cascade = CascadeType.ALL)
     @JsonBackReference

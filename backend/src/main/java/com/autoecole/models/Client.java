@@ -30,6 +30,9 @@ public class Client {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "auto_ecole_id")
     private AutoEcole autoEcole;
+    
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean premium = false;
 
     public Client(User user, String dateNaissance, String numeroPermis, String typePermis, AutoEcole autoEcole) {
         this.user = user;
