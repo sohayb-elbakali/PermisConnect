@@ -12,3 +12,5 @@ public interface DiagnosticRepository extends JpaRepository<Diagnostic, Long> {
 
     List<Diagnostic> findByClientIdOrderByDateDiagnosticDesc(Long clientId);
 }
+
+

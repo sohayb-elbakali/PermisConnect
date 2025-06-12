@@ -39,6 +39,7 @@ public class AdminController {
         return ResponseEntity.ok(adminService.createAdmin(admin));
     }
 
+
     @PutMapping("/{id}")
     public ResponseEntity<Admin> updateAdmin(@PathVariable Long id, @RequestBody Admin admin) {
         return ResponseEntity.ok(adminService.updateAdmin(id, admin));

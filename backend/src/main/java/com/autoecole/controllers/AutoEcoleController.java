@@ -17,8 +17,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @RestController
 @RequestMapping("/api/auto-ecoles")
@@ -133,4 +138,64 @@ public class AutoEcoleController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
     }
-} 
+    
+    @Operation(summary = "Obtenir les plans d'abonnement disponibles")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Plans récupérés avec succès",
+            content = @Content(schema = @Schema(implementation = SubscriptionPlanResponse.class)))
+    })
+    @GetMapping("/{id}/subscription-plans")
+    public ResponseEntity<List<SubscriptionPlanResponse>> getSubscriptionPlans(
+            @Parameter(description = "ID de l'auto-école")
+            @PathVariable Long id) {
+        // Vérifier que l'auto-école existe
+        AutoEcole autoEcole = autoEcoleService.getAutoEcoleById(id);
+        if (autoEcole == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        // Créer les plans d'abonnement (statiques pour l'instant)
+        List<SubscriptionPlanResponse> plans = new ArrayList<>();
+        
+        // Plan gratuit
+        SubscriptionPlanResponse freePlan = new SubscriptionPlanResponse();
+        freePlan.setId("free");
+        freePlan.setName("Plan Gratuit");
+        freePlan.setDescription("Accès limité aux cours de base");
+        freePlan.setPrice(0.0);
+        freePlan.setFeatures(Arrays.asList(
+            "Accès aux cours gratuits",
+            "Réservation de leçons limitée",
+            "Support par email"
+        ));
+        plans.add(freePlan);
+        
+        // Plan premium
+        SubscriptionPlanResponse premiumPlan = new SubscriptionPlanResponse();
+        premiumPlan.setId("premium");
+        premiumPlan.setName("Plan Premium");
+        premiumPlan.setDescription("Accès complet à tous les cours et fonctionnalités");
+        premiumPlan.setPrice(19.99);
+        premiumPlan.setFeatures(Arrays.asList(
+            "Accès à TOUS les cours (y compris premium)",
+            "Réservation de leçons illimitée",
+            "Support prioritaire",
+            "Matériel pédagogique exclusif",
+            "Tests blancs illimités"
+        ));
+        plans.add(premiumPlan);
+        
+        return ResponseEntity.ok(plans);
+    }
+    
+    // Classe de réponse pour les plans d'abonnement
+    @Data
+    @NoArgsConstructor
+    public static class SubscriptionPlanResponse {
+        private String id;
+        private String name;
+        private String description;
+        private Double price;
+        private List<String> features;
+    }
+}
