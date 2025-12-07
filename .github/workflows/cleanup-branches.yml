@@ -1,0 +1,50 @@
+name: Branch Cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "yes" to confirm branch deletion'
+        required: true
+        default: 'no'
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'yes'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Delete old branches
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Starting branch cleanup..."
+          
+          # List of branches to delete
+          BRANCHES=(
+            "backend"
+            "backtofront"
+            "fixbugs"
+            "frontend"
+            "new"
+            "new-backend"
+            "new-frontend"
+            "nouveau"
+          )
+          
+          for branch in "${BRANCHES[@]}"; do
+            echo "Deleting branch: $branch"
+            git push origin --delete "$branch" 2>&1 || echo "Failed to delete $branch (may not exist)"
+          done
+          
+          echo "Branch cleanup complete!"
+      
+      - name: Verify remaining branches
+        run: |
+          echo "Remaining remote branches:"
+          git branch -r

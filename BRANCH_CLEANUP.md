@@ -20,11 +20,26 @@ The following branches are old and should be removed:
 7. `new-frontend`
 8. `nouveau`
 
-## Manual Cleanup Instructions
+## Cleanup Methods
 
-To delete these branches remotely, you can use the GitHub UI or the following git commands:
+There are three ways to clean up the old branches:
 
-### Using Git Commands
+### Method 1: GitHub Actions Workflow (Recommended)
+
+The easiest and safest method is to use the GitHub Actions workflow:
+
+1. Go to the repository on GitHub
+2. Navigate to "Actions" tab
+3. Select "Branch Cleanup" workflow from the left sidebar
+4. Click "Run workflow"
+5. Type "yes" in the confirmation field
+6. Click "Run workflow" button
+
+The workflow will automatically delete all old branches.
+
+### Method 2: Using Git Commands
+
+If you have repository write access, run these commands locally:
 
 ```bash
 # Delete remote branches
@@ -38,16 +53,18 @@ git push origin --delete new-frontend
 git push origin --delete nouveau
 ```
 
-### Using GitHub UI
+Or use the provided automated script:
+
+```bash
+./cleanup-branches.sh
+```
+
+### Method 3: Using GitHub UI
 
 1. Navigate to the repository on GitHub
 2. Go to the "Branches" page (Code → Branches)
 3. For each branch listed above, click the trash icon to delete it
 4. Confirm the deletion
-
-## Automated Cleanup Script
-
-A cleanup script (`cleanup-branches.sh`) has been provided in the repository root for automated deletion.
 
 ## Post-Cleanup Verification
 

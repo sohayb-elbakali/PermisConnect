@@ -15,15 +15,17 @@ As part of repository maintenance, old feature branches have been removed. Only 
 
 For details on the cleanup process, see [BRANCH_CLEANUP.md](./BRANCH_CLEANUP.md).
 
-### Branch Cleanup Script
+### Branch Cleanup
 
-To clean up old branches, you can use the provided script:
+To clean up old branches, you have several options:
 
-```bash
-./cleanup-branches.sh
-```
+1. **GitHub Actions** (Recommended): Use the "Branch Cleanup" workflow in the Actions tab
+2. **Shell Script**: Run `./cleanup-branches.sh` locally
+3. **Manual**: Delete branches via GitHub UI or git commands
 
-This script will remove all old branches except `main` and `develop`.
+See [BRANCH_CLEANUP.md](./BRANCH_CLEANUP.md) for detailed instructions.
+
+All methods will remove old branches and keep only `main` and `develop`.
 
 ## Development
 
