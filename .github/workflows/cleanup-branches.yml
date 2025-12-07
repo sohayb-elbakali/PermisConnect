@@ -12,6 +12,8 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     if: github.event.inputs.confirm == 'yes'
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout repository
